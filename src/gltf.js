@@ -350,12 +350,10 @@ export default class GLTFParse {
                     throw new Error(`[gltfparse.js] invalid bufferView: ${index}`);
                     return;
                 }
-                let stride = GLTFParse.STRIDE_TYPE[gltf.accessors[accessorIndex].type];
-                let component = gltf.accessors[accessorIndex].componentType;
-                let count = gltf.accessors[accessorIndex].count;
-                let byteLength = 0;
+                data.accessor = gltf.accessors[accessorIndex];
+                // accessor が定まったのでデータ型に応じて TypedArray を生成する
                 let typedArrayFunc = null;
-                switch(component){
+                switch(gltf.accessors[accessorIndex].componentType){
                     case GLTFParse.CONST.BYTE:
                         typedArrayFunc = Int8Array;
                         break;
@@ -379,7 +377,6 @@ export default class GLTFParse {
                         break;
                 }
                 data.typedArray = new typedArrayFunc(targetBuffer, v.byteOffset, v.byteLength);
-                data.accessor = gltf.accessors[accessorIndex];
             }else{
                 // target 属性を持たない場合は画像などのリソース
                 data.arrayBuffer = targetBuffer.slice(v.byteOffset, v.byteOffset + v.byteLength);
