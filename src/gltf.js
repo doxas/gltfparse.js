@@ -350,7 +350,7 @@ export default class GLTFParse {
                                 img.addEventListener('load', () => {
                                     res(img);
                                 }, false);
-                                img.src = v.uri;
+                                img.src = this.path + v.uri;
                             }
                         });
                     });
@@ -385,50 +385,56 @@ export default class GLTFParse {
             let data = {bufferView: v};
             let targetBufferIndex = v.buffer;
             let targetBuffer = bin[targetBufferIndex];
-            if(v.hasOwnProperty('target') === true){
-                // target 属性を持つ場合は VBO か IBO なので対象の accessor のインデックスを調べる
-                let accessorIndex;
-                gltf.accessors.forEach((w, idx) => {
-                    if(w.hasOwnProperty('bufferView') !== true){return;}
-                    if(w.bufferView === index){
-                        accessorIndex = idx;
-                    }
-                });
-                if(accessorIndex == null){
-                    throw new Error(`[gltfparse.js] invalid bufferView: ${index}`);
-                    return;
-                }
-                data.accessor = gltf.accessors[accessorIndex];
-                // accessor が定まったのでデータ型に応じて TypedArray を生成する
-                let typedArrayFunc = null;
-                switch(gltf.accessors[accessorIndex].componentType){
-                    case GLTFParse.CONST.BYTE:
-                        typedArrayFunc = Int8Array;
-                        break;
-                    case GLTFParse.CONST.UNSIGNED_BYTE:
-                        typedArrayFunc = Uint8Array;
-                        break;
-                    case GLTFParse.CONST.SHORT:
-                        typedArrayFunc = Int16Array;
-                        break;
-                    case GLTFParse.CONST.UNSIGNED_SHORT:
-                        typedArrayFunc = Uint16Array;
-                        break;
-                    case GLTFParse.CONST.INT:
-                        typedArrayFunc = Int32Array;
-                        break;
-                    case GLTFParse.CONST.UNSIGNED_INT:
-                        typedArrayFunc = Uint32Array;
-                        break;
-                    case GLTFParse.CONST.FLOAT:
-                        typedArrayFunc = Float32Array;
-                        break;
-                }
-                data.typedArray = new typedArrayFunc(targetBuffer, v.byteOffset, v.byteLength);
-            }else{
+            // if(v.hasOwnProperty('target') === true){
+            //     // target 属性を持つ場合は VBO か IBO なので対象の accessor のインデックスを調べる
+            //     let accessorIndex;
+            //     gltf.accessors.forEach((w, idx) => {
+            //         if(w.hasOwnProperty('bufferView') !== true){return;}
+            //         if(w.bufferView === index){
+            //             accessorIndex = idx;
+            //         }
+            //     });
+            //     if(accessorIndex == null){
+            //         throw new Error(`[gltfparse.js] invalid bufferView: ${index}`);
+            //         return;
+            //     }
+            //     data.accessor = gltf.accessors[accessorIndex];
+            //     // accessor が定まったのでデータ型に応じて TypedArray を生成する
+            //     let typedArrayFunc = null;
+            //     switch(gltf.accessors[accessorIndex].componentType){
+            //         case GLTFParse.CONST.BYTE:
+            //             typedArrayFunc = Int8Array;
+            //             break;
+            //         case GLTFParse.CONST.UNSIGNED_BYTE:
+            //             typedArrayFunc = Uint8Array;
+            //             break;
+            //         case GLTFParse.CONST.SHORT:
+            //             typedArrayFunc = Int16Array;
+            //             break;
+            //         case GLTFParse.CONST.UNSIGNED_SHORT:
+            //             typedArrayFunc = Uint16Array;
+            //             break;
+            //         case GLTFParse.CONST.INT:
+            //             typedArrayFunc = Int32Array;
+            //             break;
+            //         case GLTFParse.CONST.UNSIGNED_INT:
+            //             typedArrayFunc = Uint32Array;
+            //             break;
+            //         case GLTFParse.CONST.FLOAT:
+            //             typedArrayFunc = Float32Array;
+            //             break;
+            //         default:
+            //             break
+            //     }
+            //     if(typedArrayFunc != null){
+            //         data.typedArray = new typedArrayFunc(targetBuffer, v.byteOffset, v.byteLength);
+            //     }else{
+            //        
+            //     }
+            // }else{
                 // target 属性を持たない場合は画像などのリソース
                 data.arrayBuffer = targetBuffer.slice(v.byteOffset, v.byteOffset + v.byteLength);
-            }
+            // }
             binaries[index] = data;
         });
         return binaries;
