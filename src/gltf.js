@@ -158,6 +158,7 @@ export default class GLTFParse {
             this.path = pathString;
 
             if(isBinary === true){
+                console.log(`%cfetch glb%c: %c${this.fullPath}`, `color: ${CONSOLE_OUTPUT_COLOR}`, 'color: inherit', 'color: darkorange');
                 this.fetchGlb(this.path + this.fileName)
                 .then((data) => {
                     console.log(data);
@@ -166,6 +167,7 @@ export default class GLTFParse {
                     console.error(err);
                 });
             }else{
+                console.log(`%cfetch gltf%c: %c${this.fullPath}`, `color: ${CONSOLE_OUTPUT_COLOR}`, 'color: inherit', 'color: darkorange');
                 this.fetchGltf(this.path + this.fileName)
                 .then((data) => {
                     console.log(data);
@@ -176,6 +178,11 @@ export default class GLTFParse {
             }
         });
     }
+    /**
+     * .gltf 形式
+     * @param {string} target - 読み込む *.gltf ファイルのパス
+     * @return {Promise}
+     */
     fetchGltf(target){
         return new Promise((resolve, reject) => {
             // 指定されたパスへ fetch を行う
@@ -217,7 +224,12 @@ export default class GLTFParse {
             });
         });
     }
-    fetchGlb(){
+    /**
+     * .glb 形式
+     * @param {string} target - 読み込む *.glb ファイルのパス
+     * @return {Promise}
+     */
+    fetchGlb(target){
         return new Promise((resolve, reject) => {
             // 指定されたパスへ fetch を行う
             this.fetch(`${target}.glb`, 'bin')
