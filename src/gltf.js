@@ -46,6 +46,65 @@ export default class GLTFParse {
         };
     }
     /**
+     * glTF で利用する頂点属性名を WGL で利用しているものに変換するためのテーブル
+     * @type {object}
+     */
+    static get ATTRIBUTE_TYPE(){
+        return {
+            position: 'POSITION',   // vec3
+            normal:   'NORMAL',     // vec3
+            tangent:  'TANGENT',    // vec4
+            texCoord: 'TEXCOORD_0', // vec2
+            color:    'COLOR_0',    // vec4
+            joints:   'JOINTS_0',   // vec4
+            weights:  'WEIGHTS_0'   // vec4
+        };
+    }
+    /**
+     * 頂点属性の種類によるストライド
+     * @type {object}
+     */
+    static get STRIDE_TYPE(){
+        return {
+            SCALAR: 1,
+            VEC2: 2,
+            VEC3: 3,
+            VEC4: 4,
+            MAT2: 4,
+            MAT3: 9,
+            MAT4: 16
+        };
+    }
+    /**
+     * glTF の仕様上存在する可能性のある uniform タイプ
+     * @type {object}
+     */
+    static get UNIFORM_TYPE(){
+        return {
+            BYTE:           '1i',
+            UNSIGNED_BYTE:  '1i',
+            SHORT:          '1f',
+            UNSIGNED_SHORT: '1f',
+            UNSIGNED_INT:   '1i',
+            FLOAT:          '1f',
+            FLOAT_VEC2:     '2fv',
+            FLOAT_VEC3:     '3fv',
+            FLOAT_VEC4:     '4fv',
+            INT_VEC2:       '2iv',
+            INT_VEC3:       '3iv',
+            INT_VEC4:       '4iv',
+            BOOL:           '1i',
+            BOOL_VEC2:      '2iv',
+            BOOL_VEC3:      '3iv',
+            BOOL_VEC4:      '4iv',
+            FLOAT_MAT2:     'matrix2fv',
+            FLOAT_MAT3:     'matrix3fv',
+            FLOAT_MAT4:     'matrix4fv',
+            SAMPLER_2D:     '1i',
+            SAMPLER_CUBE:   '1i'
+        };
+    }
+    /**
      * @constructor
      */
     constructor(){
@@ -74,59 +133,6 @@ export default class GLTFParse {
          * @type {mixed}
          */
         this.lastResponse = null;
-        /**
-         * glTF で利用する頂点属性名を WGL で利用しているものに変換するためのテーブル
-         * @type {object}
-         */
-        this.attributeType = {
-            position: 'POSITION',   // vec3
-            normal:   'NORMAL',     // vec3
-            tangent:  'TANGENT',    // vec4
-            texCoord: 'TEXCOORD_0', // vec2
-            color:    'COLOR_0',    // vec4
-            joints:   'JOINTS_0',   // vec4
-            weights:  'WEIGHTS_0'   // vec4
-        };
-        /**
-         * 頂点属性の種類によるストライド
-         * @type {object}
-         */
-        this.strideType = {
-            SCALAR: 1,
-            VEC2: 2,
-            VEC3: 3,
-            VEC4: 4,
-            MAT2: 4,
-            MAT3: 9,
-            MAT4: 16
-        };
-        /**
-         * glTF の仕様上存在する可能性のある uniform タイプ
-         * @type {object}
-         */
-        this.uniformType = {
-            BYTE:           '1i',
-            UNSIGNED_BYTE:  '1i',
-            SHORT:          '1f',
-            UNSIGNED_SHORT: '1f',
-            UNSIGNED_INT:   '1i',
-            FLOAT:          '1f',
-            FLOAT_VEC2:     '2fv',
-            FLOAT_VEC3:     '3fv',
-            FLOAT_VEC4:     '4fv',
-            INT_VEC2:       '2iv',
-            INT_VEC3:       '3iv',
-            INT_VEC4:       '4iv',
-            BOOL:           '1i',
-            BOOL_VEC2:      '2iv',
-            BOOL_VEC3:      '3iv',
-            BOOL_VEC4:      '4iv',
-            FLOAT_MAT2:     'matrix2fv',
-            FLOAT_MAT3:     'matrix3fv',
-            FLOAT_MAT4:     'matrix4fv',
-            SAMPLER_2D:     '1i',
-            SAMPLER_CUBE:   '1i'
-        };
     }
     /**
      * glTF ファイルをロードする
@@ -344,7 +350,7 @@ export default class GLTFParse {
                     throw new Error(`[gltfparse.js] invalid bufferView: ${index}`);
                     return;
                 }
-                let stride = this.strideType[gltf.accessors[accessorIndex].type];
+                let stride = GLTFParse.STRIDE_TYPE[gltf.accessors[accessorIndex].type];
                 let component = gltf.accessors[accessorIndex].componentType;
                 let count = gltf.accessors[accessorIndex].count;
                 let byteLength = 0;
@@ -456,7 +462,7 @@ export default class GLTFParse {
                     gl.bufferData(gl.ARRAY_BUFFER, meshes[v][j].vertexList[l], gl.STATIC_DRAW);
                     gl.bindBuffer(gl.ARRAY_BUFFER, null);
                     meshes[v][j].vboList[l] = vbo;
-                    meshes[v][j].attributeStride[l] = this.strideType[gltf.accessors[index].type]
+                    meshes[v][j].attributeStride[l] = GLTFParse.STRIDE_TYPE[gltf.accessors[index].type]
                 });
                 // プリミティブタイプ（描画時のプリミティブ）
                 meshes[v][j].primitiveType = gl.POINTS;
@@ -503,7 +509,7 @@ export default class GLTFParse {
                 let accesskey = animations[v].parameters[w];
                 let data = bin[accesskey];
                 let accessor = gltf.accessors[accesskey];
-                let stride = this.strideType[accessor.type];
+                let stride = GLTFParse.STRIDE_TYPE[accessor.type];
                 let component = accessor.componentType;
                 let typedArrayFunc = Float32Array;
                 switch(component){
@@ -573,13 +579,13 @@ export default class GLTFParse {
             let uniformValue = [];
             let uniformSemantic = [];
             let uniformNode = [];
-            let uniname = getKeys(this.uniformType);
+            let uniname = getKeys(GLTFParse.UNIFORM_TYPE);
             uniformName.map((w, j) => {
                 let parameterName = tech.uniforms[w]; // diffuse projectionMatrix etc
                 let param = tech.parameters[parameterName];
                 for(let i = 0; i < uniname.length; ++i){
                     if(param.type === GLTFParse.CONST[uniname[i]]){
-                        uniformType.push(this.uniformType[uniname[i]]);
+                        uniformType.push(GLTFParse.UNIFORM_TYPE[uniname[i]]);
                         break;
                     }
                 }
