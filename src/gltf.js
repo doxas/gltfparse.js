@@ -7,6 +7,45 @@ const CONSOLE_OUTPUT_COLOR = 'seagreen';
  */
 export default class GLTFParse {
     /**
+     * モジュール内部で利用する定数群
+     * @type {object}
+     */
+    static get CONST(){
+        return {
+            POINTS:               0,
+            LINES:                1,
+            LINE_LOOP:            2,
+            LINE_STRIP:           3,
+            TRIANGLES:            4,
+            TRIANGLE_STRIP:       5,
+            TRIANGLE_FAN:         6,
+            BYTE:                 5120,
+            UNSIGNED_BYTE:        5121,
+            SHORT:                5122,
+            UNSIGNED_SHORT:       5123,
+            INT:                  5124,
+            UNSIGNED_INT:         5125,
+            FLOAT:                5126,
+            ARRAY_BUFFER:         34962,
+            ELEMENT_ARRAY_BUFFER: 34963,
+            FLOAT_VEC2:           35664,
+            FLOAT_VEC3:           35665,
+            FLOAT_VEC4:           35666,
+            INT_VEC2:             35667,
+            INT_VEC3:             35668,
+            INT_VEC4:             35669,
+            BOOL:                 35670,
+            BOOL_VEC2:            35671,
+            BOOL_VEC3:            35672,
+            BOOL_VEC4:            35673,
+            FLOAT_MAT2:           35674,
+            FLOAT_MAT3:           35675,
+            FLOAT_MAT4:           35676,
+            SAMPLER_2D:           35678,
+            SAMPLER_CUBE:         35680,
+        };
+    }
+    /**
      * @constructor
      */
     constructor(){
@@ -35,41 +74,6 @@ export default class GLTFParse {
          * @type {mixed}
          */
         this.lastResponse = null;
-        /**
-         * モジュール内部で利用する定数群
-         * @type {object}
-         */
-        this.const = {
-            POINTS: 0,
-            LINES: 1,
-            LINE_LOOP: 2,
-            LINE_STRIP: 3,
-            TRIANGLES: 4,
-            TRIANGLE_STRIP: 5,
-            TRIANGLE_FAN: 6,
-            BYTE: 5120,
-            UNSIGNED_BYTE: 5121,
-            SHORT: 5122,
-            UNSIGNED_SHORT: 5123,
-            INT: 5124,
-            UNSIGNED_INT: 5125,
-            FLOAT: 5126,
-            FLOAT_VEC2: 35664,
-            FLOAT_VEC3: 35665,
-            FLOAT_VEC4: 35666,
-            INT_VEC2: 35667,
-            INT_VEC3: 35668,
-            INT_VEC4: 35669,
-            BOOL: 35670,
-            BOOL_VEC2: 35671,
-            BOOL_VEC3: 35672,
-            BOOL_VEC4: 35673,
-            FLOAT_MAT2: 35674,
-            FLOAT_MAT3: 35675,
-            FLOAT_MAT4: 35676,
-            SAMPLER_2D: 35678,
-            SAMPLER_CUBE: 35680
-        };
         /**
          * glTF で利用する頂点属性名を WGL で利用しているものに変換するためのテーブル
          * @type {object}
@@ -165,7 +169,7 @@ export default class GLTFParse {
                 console.log(`%cfetch glb%c: %c${this.fullPath}`, `color: ${CONSOLE_OUTPUT_COLOR}`, 'color: inherit', 'color: darkorange');
                 this.fetchGlb(this.path + this.fileName)
                 .then((data) => {
-                    console.log(data);
+                    this.parse(data);
                 })
                 .catch((err) => {
                     console.error(err);
@@ -174,92 +178,12 @@ export default class GLTFParse {
                 console.log(`%cfetch gltf%c: %c${this.fullPath}`, `color: ${CONSOLE_OUTPUT_COLOR}`, 'color: inherit', 'color: darkorange');
                 this.fetchGltf(this.path + this.fileName)
                 .then((data) => {
-                    console.log(data);
+                    this.parse(data);
                 })
                 .catch((err) => {
                     console.error(err);
                 });
             }
-        });
-    }
-    /**
-     * .gltf 形式
-     * @param {string} target - 読み込む *.gltf ファイルのパス
-     * @return {Promise}
-     */
-    fetchGltf(target){
-        return new Promise((resolve, reject) => {
-            this.fetch(`${target}.gltf`, 'json')
-            .then((gltfResponse) => {
-                let gltf = gltfResponse;
-                this.asset = gltf.asset;
-                console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
-                console.log(this.asset);
-                // gltf.buffers は常に配列
-                if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
-                    reject(new Error('not found buffers in gltf'));
-                    return;
-                }
-                let promises = [];
-                let buffers = [];
-                gltf.buffers.forEach((v, index) => {
-                    // gltf では bin が外部ファイルなので uri メンバが必要かつ個別にロードが必要
-                    promises.push(new Promise((res, rej) => {
-                        if(v.hasOwnProperty('uri') !== true || typeOf(v.uri) !== '[object String]' || v.uri === ''){
-                            rej(new Error(`[gltfparse.js] invalid gltf.buffers[${index}].uri`));
-                            return;
-                        }
-                        // buffers.uri が存在したらバイナリ取りに行く
-                        this.fetch(`${this.path}${v.uri}`, 'bin')
-                        .then((binResponse) => {
-                            buffers[index] = binResponse;
-                            res(binResponse);
-                        });
-                    }));
-                });
-                Promise.all(promises)
-                .then(() => {
-                    resolve({
-                        gltf: gltf,
-                        buffers: buffers,
-                    });
-                });
-            });
-        });
-    }
-    /**
-     * .glb 形式
-     * @param {string} target - 読み込む *.glb ファイルのパス
-     * @return {Promise}
-     */
-    fetchGlb(target){
-        return new Promise((resolve, reject) => {
-            this.fetch(`${target}.glb`, 'bin')
-            .then((gltfResponse) => {
-                // 読み込んだバイナリから chunk の情報を抜き出す
-                let glb = this.getChunkInGlb(gltfResponse);
-                // gltf 形式の JSON に相当
-                let gltf = glb.json;
-                this.asset = gltf.asset;
-                console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
-                console.log(this.asset);
-                // gltf.buffers は常に配列
-                if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
-                    reject(new Error('not found buffers in glb'));
-                    return;
-                }
-                let buffers = [];
-                gltf.buffers.forEach((v, index) => {
-                    // glb では bin ファイルではなく同じバイナリにすべて含まれるものとして処理する
-                    buffers[index] = glb.data.slice(glb.bufferBegin, v.byteLength);
-                });
-                // slice は参照ではなくコピーなので元データはクリアしておく
-                glb.data = null;
-                resolve({
-                    gltf: gltf,
-                    buffers: buffers,
-                });
-            });
         });
     }
     /**
@@ -303,46 +227,158 @@ export default class GLTFParse {
         };
     }
     /**
+     * .gltf 形式
+     * @param {string} target - 読み込む *.gltf ファイルのパス
+     * @return {Promise}
+     */
+    fetchGltf(target){
+        return new Promise((resolve, reject) => {
+            this.fetch(`${target}.gltf`, 'json')
+            .then((gltfResponse) => {
+                let gltf = gltfResponse;
+                this.asset = gltf.asset;
+                console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
+                console.log(this.asset);
+                // gltf.buffers は常に配列
+                if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
+                    reject(new Error('not found buffers in gltf'));
+                    return;
+                }
+                let promises = [];
+                let buffers = [];
+                gltf.buffers.forEach((v, index) => {
+                    // gltf では bin が外部ファイルなので uri メンバが必要かつ個別にロードが必要
+                    promises.push(new Promise((res, rej) => {
+                        if(v.hasOwnProperty('uri') !== true || typeOf(v.uri) !== '[object String]' || v.uri === ''){
+                            rej(new Error(`[gltfparse.js] invalid gltf.buffers[${index}].uri`));
+                            return;
+                        }
+                        // buffers.uri が存在したらバイナリ取りに行く
+                        this.fetch(`${this.path}${v.uri}`, 'bin')
+                        .then((binResponse) => {
+                            buffers[index] = binResponse;
+                            res();
+                        });
+                    }));
+                });
+                Promise.all(promises)
+                .then(() => {
+                    resolve({
+                        gltf: gltf,
+                        buffers: buffers,
+                    });
+                });
+            });
+        });
+    }
+    /**
+     * .glb 形式
+     * @param {string} target - 読み込む *.glb ファイルのパス
+     * @return {Promise}
+     */
+    fetchGlb(target){
+        return new Promise((resolve, reject) => {
+            this.fetch(`${target}.glb`, 'bin')
+            .then((gltfResponse) => {
+                // 読み込んだバイナリから chunk の情報を抜き出す
+                let glb = this.getChunkInGlb(gltfResponse);
+                // gltf 形式の JSON に相当
+                let gltf = glb.json;
+                this.asset = gltf.asset;
+                console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
+                console.log(this.asset);
+                // gltf.buffers は常に配列
+                if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
+                    reject(new Error('not found buffers in glb'));
+                    return;
+                }
+                let begin = glb.bufferBegin;
+                let buffers = [];
+                gltf.buffers.forEach((v, index) => {
+                    // glb では bin ファイルではなく同じバイナリにすべて含まれるものとして処理する
+                    buffers[index] = glb.data.slice(begin, begin + v.byteLength);
+                    begin += v.byteLength;
+                });
+                // slice は参照ではなくコピーなので元データはクリアしておく
+                glb.data = null;
+                resolve({
+                    gltf: gltf,
+                    buffers: buffers,
+                });
+            });
+        });
+    }
+    parse(data){
+        let bins       = this.splitBinary(data.gltf, data.buffers);
+        console.log(bins);
+        // let programs   = this.generateProgram(this.gl, data.gltf, bins);
+        // let meshes     = this.generateMesh(this.gl, data.gltf, bins);
+        // let animations = this.generateAnimation(this.gl, data.gltf, bins);
+    }
+    /**
      * loadGltf で取得した gltf ファイルの情報を元にバイナリを分割する
      * @param {object} gltf - *.gltf の中身の JSON をパースしたもの
      * @param {object} bin - *.bin ファイルのバイナリをオブジェクトで渡す
      * @return {object} 分割しオブジェクトに格納したバイナリ
      */
     splitBinary(gltf, bin){
-        if(gltf == null || bin == null || typeOf(bin) !== '[object Object]'){return null;}
-        if(!gltf.hasOwnProperty('accessors') || !gltf.hasOwnProperty('bufferViews')){return null;}
-        let i, j, k;
+        if(gltf == null || bin == null || Array.isArray(bin) !== true){return null;}
+        if(gltf.hasOwnProperty('accessors') !== true || gltf.hasOwnProperty('bufferViews') !== true){return null;}
         let binaries = {};
-        let accessors = getKeys(gltf.accessors);
-        let bufferViews = getKeys(gltf.bufferViews);
-        accessors.map((v) => {
-            let viewindex = gltf.accessors[v].bufferView;
-            if(gltf.bufferViews[viewindex] == null){return;}
-            let bufferindex = gltf.bufferViews[viewindex].buffer;
-            if(bin[bufferindex] == null){return;}
-            let stride = this.strideType[gltf.accessors[v].type];
-            let component = gltf.accessors[v].componentType;
-            let count = gltf.accessors[v].count;
-            let byteLength = 0;
-            let byteOffset = gltf.accessors[v].byteOffset;
-            switch(component){
-                case this.const.BYTE:
-                case this.const.UNSIGNED_BYTE:
-                    byteLength = stride;
-                    break;
-                case this.const.SHORT:
-                case this.const.UNSIGNED_SHORT:
-                    byteLength = stride * 2;
-                    break;
-                case this.const.INT:
-                case this.const.UNSIGNED_INT:
-                case this.const.FLOAT:
-                    byteLength = stride * 4;
-                    break;
+        // bufferViews を基準に走査するが、bufferViews.length > accessors.length という状況が
+        // glb の場合は特に、バイナリに画像を含んだりしているのであり得るという点に注意
+        gltf.bufferViews.forEach((v, index) => {
+            let data = {bufferView: v};
+            let targetBufferIndex = v.buffer;
+            let targetBuffer = bin[targetBufferIndex];
+            if(v.hasOwnProperty('target') === true){
+                // target 属性を持つ場合は VBO か IBO なので対象の accessor のインデックスを調べる
+                let accessorIndex;
+                gltf.accessors.forEach((w, idx) => {
+                    if(w.hasOwnProperty('bufferView') !== true){return;}
+                    if(w.bufferView === index){
+                        accessorIndex = idx;
+                    }
+                });
+                if(accessorIndex == null){
+                    throw new Error(`[gltfparse.js] invalid bufferView: ${index}`);
+                    return;
+                }
+                let stride = this.strideType[gltf.accessors[accessorIndex].type];
+                let component = gltf.accessors[accessorIndex].componentType;
+                let count = gltf.accessors[accessorIndex].count;
+                let byteLength = 0;
+                let typedArrayFunc = null;
+                switch(component){
+                    case GLTFParse.CONST.BYTE:
+                        typedArrayFunc = Int8Array;
+                        break;
+                    case GLTFParse.CONST.UNSIGNED_BYTE:
+                        typedArrayFunc = Uint8Array;
+                        break;
+                    case GLTFParse.CONST.SHORT:
+                        typedArrayFunc = Int16Array;
+                        break;
+                    case GLTFParse.CONST.UNSIGNED_SHORT:
+                        typedArrayFunc = Uint16Array;
+                        break;
+                    case GLTFParse.CONST.INT:
+                        typedArrayFunc = Int32Array;
+                        break;
+                    case GLTFParse.CONST.UNSIGNED_INT:
+                        typedArrayFunc = Uint32Array;
+                        break;
+                    case GLTFParse.CONST.FLOAT:
+                        typedArrayFunc = Float32Array;
+                        break;
+                }
+                data.typedArray = new typedArrayFunc(targetBuffer, v.byteOffset, v.byteLength);
+                data.accessor = gltf.accessors[accessorIndex];
+            }else{
+                // target 属性を持たない場合は画像などのリソース
+                data.arrayBuffer = targetBuffer.slice(v.byteOffset, v.byteOffset + v.byteLength);
             }
-            k = gltf.bufferViews[viewindex].byteOffset + byteOffset;
-            j = byteLength * count;
-            binaries[v] = bin[bufferindex].slice(k, k + j);
+            binaries[index] = data;
         });
         return binaries;
     }
@@ -382,16 +418,16 @@ export default class GLTFParse {
                     let type = gltf.accessors[index].componentType;
                     let typedArrayFunc = null;
                     switch(type){
-                        case this.const.BYTE:
-                        case this.const.UNSIGNED_BYTE:
+                        case GLTFParse.CONST.BYTE:
+                        case GLTFParse.CONST.UNSIGNED_BYTE:
                             typedArrayFunc = Uint8Array;
                             break;
-                        case this.const.SHORT:
-                        case this.const.UNSIGNED_SHORT:
+                        case GLTFParse.CONST.SHORT:
+                        case GLTFParse.CONST.UNSIGNED_SHORT:
                             typedArrayFunc = Uint16Array;
                             break;
-                        case this.const.INT:
-                        case this.const.UNSIGNED_INT:
+                        case GLTFParse.CONST.INT:
+                        case GLTFParse.CONST.UNSIGNED_INT:
                             typedArrayFunc = Uint32Array;
                             break;
                     }
@@ -471,16 +507,16 @@ export default class GLTFParse {
                 let component = accessor.componentType;
                 let typedArrayFunc = Float32Array;
                 switch(component){
-                    case this.const.BYTE:
+                    case GLTFParse.CONST.BYTE:
                         typedArrayFunc = Int8Array;
                         break;
-                    case this.const.UNSIGNED_BYTE:
+                    case GLTFParse.CONST.UNSIGNED_BYTE:
                         typedArrayFunc = Uint8Array;
                         break;
-                    case this.const.INT:
+                    case GLTFParse.CONST.INT:
                         typedArrayFunc = Int32Array;
                         break
-                    case this.const.UNSIGNED_INT:
+                    case GLTFParse.CONST.UNSIGNED_INT:
                         typedArrayFunc = Uint32Array;
                         break;
                 }
@@ -515,16 +551,16 @@ export default class GLTFParse {
                 let z = 1;
                 if(param.hasOwnProperty('type')){
                     switch(param.type){
-                        case this.const.FLOAT:
+                        case GLTFParse.CONST.FLOAT:
                             z = 1;
                             break;
-                        case this.const.FLOAT_VEC2:
+                        case GLTFParse.CONST.FLOAT_VEC2:
                             z = 2;
                             break;
-                        case this.const.FLOAT_VEC3:
+                        case GLTFParse.CONST.FLOAT_VEC3:
                             z = 3;
                             break;
-                        case this.const.FLOAT_VEC4:
+                        case GLTFParse.CONST.FLOAT_VEC4:
                             z = 4;
                             break;
                     }
@@ -542,7 +578,7 @@ export default class GLTFParse {
                 let parameterName = tech.uniforms[w]; // diffuse projectionMatrix etc
                 let param = tech.parameters[parameterName];
                 for(let i = 0; i < uniname.length; ++i){
-                    if(param.type === this.const[uniname[i]]){
+                    if(param.type === GLTFParse.CONST[uniname[i]]){
                         uniformType.push(this.uniformType[uniname[i]]);
                         break;
                     }
