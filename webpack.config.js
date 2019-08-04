@@ -15,12 +15,13 @@ module.exports = (env, argv) => {
     return {
         context: path.resolve(__dirname, 'src'),
         entry: {
-            script: './script.js'
+            script: './script.js',
+            gltfparse: './gltf.js'
         },
         output: {
             path: path.resolve(__dirname, 'public/js'),
             publicPath: './',
-            filename: 'script.js'
+            filename: '[name].js'
         },
         module: {
             rules: [
