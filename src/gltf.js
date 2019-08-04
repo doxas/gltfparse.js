@@ -236,43 +236,37 @@ export default class GLTFParse {
         return new Promise((resolve, reject) => {
             this.fetch(`${target}.glb`, 'bin')
             .then((gltfResponse) => {
+                // 読み込んだバイナリから chunk の情報を抜き出す
                 let glb = this.getChunkInGlb(gltfResponse);
+                // gltf 形式の JSON に相当
                 let gltf = glb.json;
                 this.asset = gltf.asset;
                 console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
                 console.log(this.asset);
                 // gltf.buffers は常に配列
                 if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
-                    reject(new Error('not found buffers in gltf'));
+                    reject(new Error('not found buffers in glb'));
                     return;
                 }
-                let promises = [];
                 let buffers = [];
                 gltf.buffers.forEach((v, index) => {
-                    // gltf では bin が外部ファイルなので uri メンバが必要かつ個別にロードが必要
-                    promises.push(new Promise((res, rej) => {
-                        if(v.hasOwnProperty('uri') !== true || typeOf(v.uri) !== '[object String]' || v.uri === ''){
-                            rej(new Error(`[gltfparse.js] invalid gltf.buffers[${index}].uri`));
-                            return;
-                        }
-                        // buffers.uri が存在したらバイナリ取りに行く
-                        this.fetch(`${this.path}${v.uri}`, 'bin')
-                        .then((binResponse) => {
-                            buffers[index] = binResponse;
-                            res(binResponse);
-                        });
-                    }));
+                    // glb では bin ファイルではなく同じバイナリにすべて含まれるものとして処理する
+                    buffers[index] = glb.data.slice(glb.bufferBegin, v.byteLength);
                 });
-                Promise.all(promises)
-                .then(() => {
-                    resolve({
-                        gltf: gltf,
-                        buffers: buffers,
-                    });
+                // slice は参照ではなくコピーなので元データはクリアしておく
+                glb.data = null;
+                resolve({
+                    gltf: gltf,
+                    buffers: buffers,
                 });
             });
         });
     }
+    /**
+     * .glb 形式のバイナリから chunk データを抜き出す
+     * @param {ArrayBuffer} data - glb ファイルのバイナリ
+     * @return {object}
+     */
     getChunkInGlb(data){
         if(data == null){
             throw new Error('[gltfparse.js] invalid glb');
@@ -302,6 +296,7 @@ export default class GLTFParse {
             version: version[0],
             length: length[0],
             chunkLength: chunkLength[0],
+            bufferBegin: 20 + chunkLength[0],
             type: type,
             json: json,
             data: data,
