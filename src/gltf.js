@@ -130,9 +130,14 @@ export default class GLTFParse {
         this.fileName = '';
         /**
          * 直近の fetch の結果
-         * @type {mixed}
+         * @type {any}
          */
         this.lastResponse = null;
+        /**
+         * バイナリデータをパースしたもの
+         * @type {object}
+         */
+        this.data = null;
     }
     /**
      * glTF ファイルをロードする
@@ -175,7 +180,10 @@ export default class GLTFParse {
                 console.log(`%cfetch glb%c: %c${this.fullPath}`, `color: ${CONSOLE_OUTPUT_COLOR}`, 'color: inherit', 'color: darkorange');
                 this.fetchGlb(this.path + this.fileName)
                 .then((data) => {
-                    this.parse(data);
+                    return this.parse(data);
+                })
+                .then((data) => {
+                    console.log('☕', data);
                 })
                 .catch((err) => {
                     console.error(err);
@@ -184,7 +192,10 @@ export default class GLTFParse {
                 console.log(`%cfetch gltf%c: %c${this.fullPath}`, `color: ${CONSOLE_OUTPUT_COLOR}`, 'color: inherit', 'color: darkorange');
                 this.fetchGltf(this.path + this.fileName)
                 .then((data) => {
-                    this.parse(data);
+                    return this.parse(data);
+                })
+                .then((data) => {
+                    console.log('☕', data);
                 })
                 .catch((err) => {
                     console.error(err);
@@ -315,11 +326,48 @@ export default class GLTFParse {
         });
     }
     parse(data){
-        let bins       = this.splitBinary(data.gltf, data.buffers);
-        console.log(bins);
-        // let programs   = this.generateProgram(this.gl, data.gltf, bins);
-        // let meshes     = this.generateMesh(this.gl, data.gltf, bins);
-        // let animations = this.generateAnimation(this.gl, data.gltf, bins);
+        return new Promise((lastResolve, lastReject) => {
+            data.binaries = this.splitBinary(data.gltf, data.buffers);
+            // いち早くメモリを解放させるため null 代入
+            data.buffers = null;
+            // 紛らわしいので消す
+            delete data.buffers;
+            // 必要なリソースのさらなる読み込み・パース
+            new Promise((resolve, reject) => {
+                // 画像
+                if(data.gltf.hasOwnProperty('images') === true && data.gltf.images.length > 0){
+                    let promises = data.gltf.images.map((v, index) => {
+                        return new Promise((res, rej) => {
+                            if(v.hasOwnProperty('mimeType') === true && v.hasOwnProperty('bufferView') === true){
+                                // binary
+                                let blob = new Blob([data.binaries[v.bufferView]], {type: v.mimeType});
+                                let img = new Image();
+                                img.src = window.URL.createObjectURL(blob);
+                                res(img);
+                            }else if(v.hasOwnProperty('uri') === true){
+                                // fetch file
+                                let img = new Image();
+                                img.addEventListener('load', () => {
+                                    res(img);
+                                }, false);
+                                img.src = v.uri;
+                            }
+                        });
+                    });
+                    Promise.all(promises)
+                    .then((images) => {
+                        data.images = images;
+                        resolve();
+                    });
+                }else{
+                    resolve();
+                }
+            })
+            .then(() => {
+                // TODO: animation
+                lastResolve(data);
+            });
+        });
     }
     /**
      * loadGltf で取得した gltf ファイルの情報を元にバイナリを分割する
@@ -651,7 +699,7 @@ window.GLTFParse = GLTFParse;
 
 /**
  * toString を用いた型チェック文字列を返す
- * @param {mixed} any - 調査したいなにか
+ * @param {any} any - 調査したいなにか
  * @return {string} toString.call の返却文字列
  */
 function typeOf(any){
