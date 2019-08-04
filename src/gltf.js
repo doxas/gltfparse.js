@@ -145,7 +145,11 @@ export default class GLTFParse {
                 pathString = path.replace(fileName[0], '');
                 // 拡張子 gltf の場合、同名の *.bin ファイルを開く必要があるため
                 // 拡張子以外の部分だけを抜き出しておく
-                fileName = fileName[0].replace(/\.gltf\/?$/, '');
+                if(isBinary === true){
+                    fileName = fileName[0].replace(/\.glb\/?$/, '');
+                }else{
+                    fileName = fileName[0].replace(/\.gltf\/?$/, '');
+                }
             }else{
                 reject(new Error(`[gltfparse.js] invalid path: ${path}`));
                 return;
@@ -185,7 +189,6 @@ export default class GLTFParse {
      */
     fetchGltf(target){
         return new Promise((resolve, reject) => {
-            // 指定されたパスへ fetch を行う
             this.fetch(`${target}.gltf`, 'json')
             .then((gltfResponse) => {
                 let gltf = gltfResponse;
@@ -231,44 +234,78 @@ export default class GLTFParse {
      */
     fetchGlb(target){
         return new Promise((resolve, reject) => {
-            // 指定されたパスへ fetch を行う
             this.fetch(`${target}.glb`, 'bin')
-            // .then((gltfResponse) => {
-            //     let gltf = gltfResponse;
-            //     this.asset = gltf.asset;
-            //     console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
-            //     console.log(this.asset);
-            //     // gltf.buffers は常に配列
-            //     if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
-            //         reject(new Error('not found buffers in gltf'));
-            //         return;
-            //     }
-            //     let promises = [];
-            //     let buffers = [];
-            //     gltf.buffers.forEach((v, index) => {
-            //         // gltf では bin が外部ファイルなので uri メンバが必要かつ個別にロードが必要
-            //         promises.push(new Promise((res, rej) => {
-            //             if(v.hasOwnProperty('uri') !== true || typeOf(v.uri) !== '[object String]' || v.uri === ''){
-            //                 rej(new Error(`[gltfparse.js] invalid gltf.buffers[${index}].uri`));
-            //                 return;
-            //             }
-            //             // buffers.uri が存在したらバイナリ取りに行く
-            //             this.fetch(`${this.path}${v.uri}`, 'bin')
-            //             .then((binResponse) => {
-            //                 buffers[index] = binResponse;
-            //                 res(binResponse);
-            //             });
-            //         }));
-            //     });
-            //     Promise.all(promises)
-            //     .then(() => {
-            //         resolve({
-            //             gltf: gltf,
-            //             buffers: buffers,
-            //         });
-            //     });
-            // });
+            .then((gltfResponse) => {
+                let glb = this.getChunkInGlb(gltfResponse);
+                let gltf = glb.json;
+                this.asset = gltf.asset;
+                console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
+                console.log(this.asset);
+                // gltf.buffers は常に配列
+                if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
+                    reject(new Error('not found buffers in gltf'));
+                    return;
+                }
+                let promises = [];
+                let buffers = [];
+                gltf.buffers.forEach((v, index) => {
+                    // gltf では bin が外部ファイルなので uri メンバが必要かつ個別にロードが必要
+                    promises.push(new Promise((res, rej) => {
+                        if(v.hasOwnProperty('uri') !== true || typeOf(v.uri) !== '[object String]' || v.uri === ''){
+                            rej(new Error(`[gltfparse.js] invalid gltf.buffers[${index}].uri`));
+                            return;
+                        }
+                        // buffers.uri が存在したらバイナリ取りに行く
+                        this.fetch(`${this.path}${v.uri}`, 'bin')
+                        .then((binResponse) => {
+                            buffers[index] = binResponse;
+                            res(binResponse);
+                        });
+                    }));
+                });
+                Promise.all(promises)
+                .then(() => {
+                    resolve({
+                        gltf: gltf,
+                        buffers: buffers,
+                    });
+                });
+            });
         });
+    }
+    getChunkInGlb(data){
+        if(data == null){
+            throw new Error('[gltfparse.js] invalid glb');
+            return;
+        }
+        let magic       = String.fromCharCode.apply(null, new Uint8Array(data, 0, 4));
+        let version     = new Uint32Array(data, 4, 1);
+        let length      = new Uint32Array(data, 8, 1);
+        let chunkLength = new Uint32Array(data, 12, 1);
+        let type        = String.fromCharCode.apply(null, new Uint8Array(data, 16, 4));
+        if(magic.toLowerCase() !== 'gltf' || type.toLowerCase() !== 'json'){
+            throw new Error('[gltfparse.js] invalid chank data in glb');
+            return;
+        }
+        if(version == null || version[0] == null || version[0] !== 2){
+            throw new Error(`[gltfparse.js] this glb is a not supported version: ${version}`);
+            return;
+        }
+        if(chunkLength == null || chunkLength[0] == null || chunkLength[0] === 0){
+            throw new Error(`[gltfparse.js] invalid chunk data length: ${chunkLength}`);
+            return;
+        }
+        let chunk = String.fromCharCode.apply(null, new Uint8Array(data, 20, chunkLength[0]));
+        let json = JSON.parse(chunk);
+        return {
+            magic: magic,
+            version: version[0],
+            length: length[0],
+            chunkLength: chunkLength[0],
+            type: type,
+            json: json,
+            data: data,
+        };
     }
     /**
      * loadGltf で取得した gltf ファイルの情報を元にバイナリを分割する
