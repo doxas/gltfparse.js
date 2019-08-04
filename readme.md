@@ -11,8 +11,8 @@ simple gltf parser.
 
 ## TODO
 
-* [] 
-* [] 
+* [] accessor を頼りに bufferbiew のデータを分割
+* [] 分割後のデータから VBO・IBO 用 TypedArray を作る
 * [] 
 * [] 
 * [] 
