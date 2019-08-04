@@ -1,8 +1,11 @@
+
+const CONSOLE_OUTPUT_COLOR = 'seagreen';
+
 /**
  * gltf のロードとパースを行うクラス
  * @class Loader
  */
-export default class ParseGltf {
+export default class GLTFParse {
     /**
      * @constructor
      */
@@ -124,72 +127,135 @@ export default class ParseGltf {
     /**
      * glTF ファイルをロードする
      * @param {string} path - gltf ファイルのパス（*.gltf or *.glb）※glb はまだ未実装
-     * @param {function} callback - コールバック関数
+     * @return {Promise}
      */
-    load(path, callback){
-        // パスが falsy なものでないか調べる
-        if(path == null || typeOf(path) !== '[object String]' || path === ''){
-            callback('invalid path', path);
-            return;
-        }
-        // gltf 拡張子を含むファイル名がパスから取り出せるか調べる
-        let fileName = path.match(/[^\/]+\.gltf\/?$/);
-        let pathString = '';
-        if(fileName != null){
-            // ファイルを含むディレクトリまでのパス
-            pathString = path.replace(fileName[0], '');
-            // 同名の *.bin ファイルを取りに行くことになるため拡張子以外の部分だけを抜き出しておく
-            fileName = fileName[0].replace(/\.gltf\/?$/, '');
-        }else{
-            callback('invalid path', null);
-            return;
-        }
-        // 拡張子を含まないファイル名
-        this.fileName = fileName;
-        // 指定されたパス全体
-        this.fullPath = path;
-        // ディレクトリまでのパス
-        this.path = pathString;
-        // 指定されたパスへ fetch を行う
-        this.fetch(this.path + this.fileName + '.gltf', 'gltf', (err, res) => {
-            let keys;
-            if(err != null){
-                callback(err, res);
+    load(path){
+        return new Promise((resolve, reject) => {
+            // パス文字列の整合性を調べる
+            if(path == null || typeOf(path) !== '[object String]' || path === ''){
+                reject(new Error(`[gltfparse.js] invalid path: ${path}`));
                 return;
             }
-            // この res が glTF
-            let gltf = res;
-            this.asset = gltf.asset;
-            console.log('gltf version: ', this.asset);
-            // buffer 関連読みに行く
-            if(isset(gltf, 'buffers') && gltf.buffers != null){
-                keys = getKeys(gltf.buffers);
-                let buffers = {};
-                keys.map((v) => {
-                    buffers[v] = gltf.buffers[v];
-                });
-                if(buffers[keys[0]] == null || buffers[keys[0]].uri == null || typeOf(buffers[keys[0]].uri) !== '[object String]' || buffers[keys[0]].uri === ''){
-                    callback('not found buffer uri', gltf);
-                    return;
-                }
-                // buffers.uri が存在したらバイナリ取りに行く
-                this.fetch(this.path + buffers[keys[0]].uri, 'bin', (err, res) => {
-                    if(err != null){
-                        callback(err, res);
-                        return;
-                    }
-                    // バイナリと glTF 情報を一緒にコールバックで返す
-                    let bins = {};
-                    bins[keys[0]] = res;
-                    callback(null, {
-                        gltf: gltf,
-                        bin: bins
-                    });
+            // gltf 拡張子を含むファイル名がパスから取り出せるか調べる
+            let fileName = path.match(/[^\/]+(\.gltf|\.glb)$/);
+            let isBinary = path.search(/\.glb$/) > -1;
+            let pathString = '';
+            if(fileName != null){
+                // ファイルを含むディレクトリまでのパス
+                pathString = path.replace(fileName[0], '');
+                // 拡張子 gltf の場合、同名の *.bin ファイルを開く必要があるため
+                // 拡張子以外の部分だけを抜き出しておく
+                fileName = fileName[0].replace(/\.gltf\/?$/, '');
+            }else{
+                reject(new Error(`[gltfparse.js] invalid path: ${path}`));
+                return;
+            }
+            // 指定されたパス全体（./hoge/fuga.gltf）
+            this.fullPath = path;
+            // 拡張子を含まないファイル名（./hoge/[fuga].gltf）
+            this.fileName = fileName;
+            // ディレクトリまでのパス（[./hoge/]fuga.gltf）
+            this.path = pathString;
+
+            if(isBinary === true){
+                this.fetchGlb(this.path + this.fileName)
+                .then((data) => {
+                    console.log(data);
+                })
+                .catch((err) => {
+                    console.error(err);
                 });
             }else{
-                callback('not found buffer uri', gltf);
-                return;
+                this.fetchGltf(this.path + this.fileName)
+                .then((data) => {
+                    console.log(data);
+                })
+                .catch((err) => {
+                    console.error(err);
+                });
             }
+        });
+    }
+    fetchGltf(target){
+        return new Promise((resolve, reject) => {
+            // 指定されたパスへ fetch を行う
+            this.fetch(`${target}.gltf`, 'json')
+            .then((gltfResponse) => {
+                let gltf = gltfResponse;
+                this.asset = gltf.asset;
+                console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
+                console.log(this.asset);
+                // gltf.buffers は常に配列
+                if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
+                    reject(new Error('not found buffers in gltf'));
+                    return;
+                }
+                let promises = [];
+                let buffers = [];
+                gltf.buffers.forEach((v, index) => {
+                    // gltf では bin が外部ファイルなので uri メンバが必要かつ個別にロードが必要
+                    promises.push(new Promise((res, rej) => {
+                        if(v.hasOwnProperty('uri') !== true || typeOf(v.uri) !== '[object String]' || v.uri === ''){
+                            rej(new Error(`[gltfparse.js] invalid gltf.buffers[${index}].uri`));
+                            return;
+                        }
+                        // buffers.uri が存在したらバイナリ取りに行く
+                        this.fetch(`${this.path}${v.uri}`, 'bin')
+                        .then((binResponse) => {
+                            buffers[index] = binResponse;
+                            res(binResponse);
+                        });
+                    }));
+                });
+                Promise.all(promises)
+                .then(() => {
+                    resolve({
+                        gltf: gltf,
+                        buffers: buffers,
+                    });
+                });
+            });
+        });
+    }
+    fetchGlb(){
+        return new Promise((resolve, reject) => {
+            // 指定されたパスへ fetch を行う
+            this.fetch(`${target}.glb`, 'bin')
+            // .then((gltfResponse) => {
+            //     let gltf = gltfResponse;
+            //     this.asset = gltf.asset;
+            //     console.log(`%cgltf asset info%c: `, `color: ${CONSOLE_OUTPUT_COLOR}`, `color: inherit`);
+            //     console.log(this.asset);
+            //     // gltf.buffers は常に配列
+            //     if(gltf.hasOwnProperty('buffers') !== true && Array.isArray(gltf.buffers) !== true){
+            //         reject(new Error('not found buffers in gltf'));
+            //         return;
+            //     }
+            //     let promises = [];
+            //     let buffers = [];
+            //     gltf.buffers.forEach((v, index) => {
+            //         // gltf では bin が外部ファイルなので uri メンバが必要かつ個別にロードが必要
+            //         promises.push(new Promise((res, rej) => {
+            //             if(v.hasOwnProperty('uri') !== true || typeOf(v.uri) !== '[object String]' || v.uri === ''){
+            //                 rej(new Error(`[gltfparse.js] invalid gltf.buffers[${index}].uri`));
+            //                 return;
+            //             }
+            //             // buffers.uri が存在したらバイナリ取りに行く
+            //             this.fetch(`${this.path}${v.uri}`, 'bin')
+            //             .then((binResponse) => {
+            //                 buffers[index] = binResponse;
+            //                 res(binResponse);
+            //             });
+            //         }));
+            //     });
+            //     Promise.all(promises)
+            //     .then(() => {
+            //         resolve({
+            //             gltf: gltf,
+            //             buffers: buffers,
+            //         });
+            //     });
+            // });
         });
     }
     /**
@@ -455,42 +521,51 @@ export default class ParseGltf {
         });
         return programs;
     }
-    fetch(target, type, callback){
-        let headers = new Headers({
-            'Pragma': 'no-cache',
-            'Cache-Control': 'no-cache'
-        });
-        let option = {
-            method: 'GET',
-            headers: headers,
-            mode: 'cors',
-            cache: 'default'
-        };
-        fetch(target, option).then((response) => {
-            switch(type){
-                case 'gltf':
-                case 'json':
-                    return response.json();
-                case 'bin':
-                    return response.arrayBuffer();
-                case 'blob':
-                    return response.blob();
-                default:
-                    callback('invalid type', response);
-                    break;
-            }
-        }).then((res) => {
-            this.lastResponse = res;
-            callback(null, res);
-        }).catch((err) => {
-            this.lastResponse = null;
-            callback(err, null);
+    fetch(target, type){
+        return new Promise((resolve, reject) => {
+            let headers = new Headers({
+                'Pragma': 'no-cache',
+                'Cache-Control': 'no-cache'
+            });
+            let option = {
+                method: 'GET',
+                headers: headers,
+                mode: 'cors',
+                cache: 'default'
+            };
+            fetch(target, option)
+            .then((res) => {
+                switch(type){
+                    case 'text':
+                        return res.text();
+                    case 'json':
+                        return res.json();
+                    case 'bin':
+                        return res.arrayBuffer();
+                    case 'blob':
+                        return res.blob();
+                    default:
+                        reject(new Error(`[gltfparse.js] invalid type: ${type}`));
+                        break;
+                }
+            })
+            .then((res) => {
+                this.lastResponse = res;
+                resolve(res);
+            })
+            .catch((err) => {
+                this.lastResponse = null;
+                reject(err);
+            });
         });
     }
     getLastResponse(){
         return this.lastResponse;
     }
 }
+
+window.GLTFParse = GLTFParse;
+
 /**
  * toString を用いた型チェック文字列を返す
  * @param {mixed} any - 調査したいなにか
@@ -498,21 +573,6 @@ export default class ParseGltf {
  */
 function typeOf(any){
     return Object.prototype.toString.call(any);
-}
-/**
- * オブジェクトに指定されたメンバが含まれるか調べる
- * @parma {object} data - 対象となるオブジェクト
- * @param {string} member - 含まれる可能性があるメンバ名
- * @return {boolean} 含まれるかどうかの真偽値
- */
-function isset(data, ...member){
-    if(data == null || member == null){return false;}
-    let p = JSON.parse(JSON.stringify(data));
-    for(let i = 0, j = member.length; i < j; ++i){
-        if(p == null || !p.hasOwnProperty(member[i])){return false;}
-        p = p[member[i]];
-        if(i === j - 1){return true;}
-    };
 }
 /**
  * object 及び Array から key を抜き出し返す
@@ -523,9 +583,8 @@ function getKeys(any){
     let arr = [];
     switch(typeOf(any)){
         case '[object Array]':
-            let length = any.length;
-            for(let i = 0; i < length; ++i){
-                arr.push(i);
+            if(any.length > 0){
+                arr = any.map((v, i) => {return i;});
             }
             break;
         case '[object Object]':
