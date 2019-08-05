@@ -334,13 +334,32 @@ export default class GLTFParse {
             delete data.buffers;
             // 必要なリソースのさらなる読み込み・パース
             new Promise((resolve, reject) => {
+                // accessor
+                if(data.gltf.hasOwnProperty('accessors') === true && data.gltf.accessors.length > 0){
+                    data.parsed = [];
+                    data.gltf.accessors.forEach((v, index) => {
+                        let begin = 0;
+                        if(v.hasOwnProperty('byteOffset') === true){
+                            begin = v.byteOffset;
+                        }
+                        let func = this.getTypedArrayFunctionFromComponent(v.componentType);
+                        data.parsed[index] = {
+                            data: new func(data.binaries[v.bufferView].arrayBuffer, begin, v.count * GLTFParse.STRIDE_TYPE[v.type]),
+                            min: v.min,
+                            max: v.max,
+                            componentType: v.componentType,
+                            type: v.type,
+                            count: v.count,
+                        };
+                    });
+                }
                 // 画像
                 if(data.gltf.hasOwnProperty('images') === true && data.gltf.images.length > 0){
                     let promises = data.gltf.images.map((v, index) => {
                         return new Promise((res, rej) => {
                             if(v.hasOwnProperty('mimeType') === true && v.hasOwnProperty('bufferView') === true){
                                 // binary
-                                let blob = new Blob([data.binaries[v.bufferView]], {type: v.mimeType});
+                                let blob = new Blob([data.binaries[v.bufferView]].arrayBuffer, {type: v.mimeType});
                                 let img = new Image();
                                 img.src = window.URL.createObjectURL(blob);
                                 res(img);
@@ -695,6 +714,35 @@ export default class GLTFParse {
                 reject(err);
             });
         });
+    }
+    getTypedArrayFunctionFromComponent(componentType){
+        let typedArrayFunc = null;
+        switch(componentType){
+            case GLTFParse.CONST.BYTE:
+                typedArrayFunc = Int8Array;
+                break;
+            case GLTFParse.CONST.UNSIGNED_BYTE:
+                typedArrayFunc = Uint8Array;
+                break;
+            case GLTFParse.CONST.SHORT:
+                typedArrayFunc = Int16Array;
+                break;
+            case GLTFParse.CONST.UNSIGNED_SHORT:
+                typedArrayFunc = Uint16Array;
+                break;
+            case GLTFParse.CONST.INT:
+                typedArrayFunc = Int32Array;
+                break;
+            case GLTFParse.CONST.UNSIGNED_INT:
+                typedArrayFunc = Uint32Array;
+                break;
+            case GLTFParse.CONST.FLOAT:
+                typedArrayFunc = Float32Array;
+                break;
+            default:
+                break
+        }
+        return typedArrayFunc;
     }
     getLastResponse(){
         return this.lastResponse;
