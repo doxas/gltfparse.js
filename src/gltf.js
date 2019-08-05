@@ -353,7 +353,7 @@ export default class GLTFParse {
                         };
                     });
                 }
-                // 画像
+                // images
                 if(data.gltf.hasOwnProperty('images') === true && data.gltf.images.length > 0){
                     let promises = data.gltf.images.map((v, index) => {
                         return new Promise((res, rej) => {
