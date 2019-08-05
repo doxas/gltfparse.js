@@ -289,12 +289,7 @@ export default class GLTFParse {
     /**
      * @constructor
      */
-    constructor(gl){
-        /**
-         * WebGLRenderingContext
-         * @type {WebGLRenderingContext}
-         */
-        this.gl = gl;
+    constructor(){
         /**
          * バイナリデータをパース・変換したデータ
          * @type {object}
@@ -325,9 +320,6 @@ export default class GLTFParse {
          * @type {any}
          */
         this.lastResponse = null;
-    }
-    setContext(gl){
-        this.gl = gl;
     }
     /**
      * glTF ファイルをロードする
@@ -612,7 +604,6 @@ export default class GLTFParse {
         let binaries  = data.binaries;
         let images    = data.images;
         if(
-            this.gl == null ||
             gltf == null ||
             gltf.hasOwnProperty('scenes') !== true ||
             Array.isArray(gltf.scenes) !== true ||
