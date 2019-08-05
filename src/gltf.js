@@ -3,6 +3,37 @@ const CONSOLE_OUTPUT_COLOR = 'seagreen';
 
 class GLTFNode {
     /**
+     * glTF の頂点属性名テーブル
+     * @type {object}
+     */
+    static get ATTRIBUTE_TYPE(){
+        return {
+            POSITION:   'position',  // vec3
+            NORMAL:     'normal',    // vec3
+            TANGENT:    'tangent',   // vec4
+            TEXCOORD_0: 'texCoord0', // vec2
+            TEXCOORD_1: 'texCoord1', // vec2
+            COLOR_0:    'color',     // vec4
+            JOINTS_0:   'joints',    // vec4
+            WEIGHTS_0:  'weights',   // vec4
+        };
+    }
+    /**
+     * glTF のプリミティブタイプテーブル
+     * @type {object}
+     */
+    static get PRIMITIVE_TYPE(){
+        return {
+            0: 'POINTS',
+            1: 'LINES',
+            2: 'LINE_LOOP',
+            3: 'LINE_STRIP',
+            4: 'TRIANGLES',
+            5: 'TRIANGLE_STRIP',
+            6: 'TRIANGLE_FAN',
+        };
+    }
+    /**
      * ノード
      * @param {object} currenta - このノードの情報
      * @param {object} data - データ構造の出力先（最終的に GLTFParse.data になるオブジェクト）
@@ -12,6 +43,130 @@ class GLTFNode {
         this.matrix   = current.matrix != null ? current.matrix : null;
         this.mesh     = current.mesh   != null ? current.mesh   : null;
         this.children = [];
+
+        // mesh exists
+        if(this.mesh != null){
+            let mesh = data.gltf.meshes[this.mesh];
+            this.mesh = [];
+            mesh.primitives.forEach((v, index) => {
+                this.mesh[index] = {
+                    primitiveType: GLTFNode.PRIMITIVE_TYPE[v.mode],
+                };
+                let key = Object.keys(v.attributes);
+                key.forEach((w, idx) => {
+                    this.mesh[index][GLTFNode.ATTRIBUTE_TYPE[w]] = data.parsedBuffers[v.attributes[w]];
+                });
+                if(v.hasOwnProperty('indices') === true){
+                    this.mesh[index].indices = data.parsedBuffers[v.indices];
+                }
+                // material exists
+                if(v.hasOwnProperty('material') === true){
+                    let material = data.gltf.materials[v.material];
+                    // テクスチャ座標は texCoord0 と texCoord1 を取り得るので既定値を 0 にする
+                    // その他の係数は存在確認を行って適宜キャッシュする
+                    let baseColorImage                 = null;
+                    let baseColorTexCoordIndex         = 0;
+                    let baseColorFactor                = null;
+                    let metallicRoughnessImage         = null;
+                    let metallicRoughnessTexCoordIndex = 0;
+                    let metallicFactor                 = null;
+                    let roughnessFactor                = null;
+                    if(material.hasOwnProperty('pbrMetallicRoughness') === true){
+                        if(material.pbrMetallicRoughness.hasOwnProperty('baseColorTexture') === true){
+                            baseColorImage = data.images[material.pbrMetallicRoughness.baseColorTexture.index];
+                            if(material.pbrMetallicRoughness.baseColorTexture.hasOwnProperty('texCoord') === true){
+                                baseColorTexCoordIndex = material.pbrMetallicRoughness.baseColorTexture.texCoord;
+                            }
+                        }
+                        if(material.pbrMetallicRoughness.hasOwnProperty('baseColorFactor') === true){
+                            baseColorFactor = material.pbrMetallicRoughness.baseColorFactor;
+                        }
+                        if(material.pbrMetallicRoughness.hasOwnProperty('metallicRoughnessTexture') === true){
+                            metallicRoughnessImage = data.images[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+                            if(material.pbrMetallicRoughness.metallicRoughnessTexture.hasOwnProperty('texCoord') === true){
+                                metallicRoughnessTexCoordIndex = material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
+                            }
+                        }
+                        if(material.pbrMetallicRoughness.hasOwnProperty('metallicFactor') === true){
+                            metallicFactor = material.pbrMetallicRoughness.metallicFactor;
+                        }
+                        if(material.pbrMetallicRoughness.hasOwnProperty('roughnessFactor') === true){
+                            roughnessFactor = material.pbrMetallicRoughness.roughnessFactor;
+                        }
+                    }
+                    let normalImage            = null;
+                    let normalTexCoordIndex    = 0;
+                    let normalScale            = null;
+                    let occlusionImage         = null;
+                    let occlusionTexCoordIndex = 0;
+                    let occlusionStrength      = null;
+                    let emissiveImage          = null;
+                    let emissiveTexCoordIndex  = 0;
+                    let emissiveFactor         = null;
+                    if(material.hasOwnProperty('normalTexture') === true){
+                        normalImage = data.images[material.normalTexture.index];
+                        if(material.normalTexture.hasOwnProperty('scale') === true){
+                            normalScale = material.normalTexture.scale;
+                        }
+                        if(material.normalTexture.hasOwnProperty('texCoord') === true){
+                            normalTexCoordIndex = material.normalTexture.texCoord;
+                        }
+                    }
+                    if(material.hasOwnProperty('occlusionTexture') === true){
+                        occlusionImage = data.images[material.occlusionTexture.index];
+                        if(material.occlusionTexture.hasOwnProperty('strength') === true){
+                            occlusionStrength = material.occlusionTexture.strength;
+                        }
+                        if(material.occlusionTexture.hasOwnProperty('texCoord') === true){
+                            occlusionTexCoordIndex = material.occlusionTexture.texCoord;
+                        }
+                    }
+                    if(material.hasOwnProperty('emissiveTexture') === true){
+                        emissiveImage = data.images[material.emissiveTexture.index];
+                        if(material.emissiveTexture.hasOwnProperty('texCoord') === true){
+                            emissiveTexCoordIndex = material.emissiveTexture.texCoord;
+                        }
+                    }
+                    if(material.hasOwnProperty('emissiveFactor') === true){
+                        emissiveFactor = material.emissiveFactor;
+                    }
+                    this.mesh[index].material = {
+                        baseColorTexture: {
+                            image: baseColorImage,
+                            index: baseColorTexCoordIndex,
+                            factor: baseColorFactor,
+                        },
+                        metallicRoughnessTexture: {
+                            image: metallicRoughnessImage,
+                            index: metallicRoughnessTexCoordIndex,
+                            metallicFactor: metallicFactor,
+                            roughnessFactor: roughnessFactor,
+                        },
+                        normalTexture: {
+                            image: normalImage,
+                            index: normalTexCoordIndex,
+                            scale: normalScale,
+                        },
+                        occlusionTexture: {
+                            image: occlusionImage,
+                            index: occlusionTexCoordIndex,
+                            strength: occlusionStrength,
+                        },
+                        emissiveTexture: {
+                            image: emissiveImage,
+                            index: emissiveTexCoordIndex,
+                            factor: emissiveFactor,
+                        },
+                    };
+                    // ルート階層に名前付きでキャッシュしておく
+                    // これはテクスチャをマテリアル名で一括置換する場合などのための施策
+                    if(data.materials.hasOwnProperty(material.name) !== true){
+                        data.materials[material.name] = [];
+                    }
+                    data.materials[material.name].push(this.mesh[index].material);
+                }
+            });
+        }
 
         if(
             current.hasOwnProperty('nodes') &&
@@ -33,6 +188,7 @@ class GLTFNode {
         }else{
             // scene 以外は node
             if(Array.isArray(current.children) === true){
+                // children がある場合だけ再帰
                 current.children.forEach((v, index) => {
                     let child = data.gltf.nodes[v];
                     let node = new GLTFNode(child, data);
@@ -60,13 +216,6 @@ export default class GLTFParse {
      */
     static get CONST(){
         return {
-            POINTS:               0,
-            LINES:                1,
-            LINE_LOOP:            2,
-            LINE_STRIP:           3,
-            TRIANGLES:            4,
-            TRIANGLE_STRIP:       5,
-            TRIANGLE_FAN:         6,
             BYTE:                 5120,
             UNSIGNED_BYTE:        5121,
             SHORT:                5122,
@@ -91,21 +240,6 @@ export default class GLTFParse {
             FLOAT_MAT4:           35676,
             SAMPLER_2D:           35678,
             SAMPLER_CUBE:         35680,
-        };
-    }
-    /**
-     * glTF で利用する頂点属性名を WGL で利用しているものに変換するためのテーブル
-     * @type {object}
-     */
-    static get ATTRIBUTE_TYPE(){
-        return {
-            position: 'POSITION',   // vec3
-            normal:   'NORMAL',     // vec3
-            tangent:  'TANGENT',    // vec4
-            texCoord: 'TEXCOORD_0', // vec2
-            color:    'COLOR_0',    // vec4
-            joints:   'JOINTS_0',   // vec4
-            weights:  'WEIGHTS_0'   // vec4
         };
     }
     /**
@@ -493,10 +627,12 @@ export default class GLTFParse {
             return;
         }
         // scene メンバを追加
-        data.scenes = {};
-        data.nodes = {};
+        data.scenes = [];    // シーンは配列
+        data.nodes = {};     // ノードは名前で引けるようにオブジェクト
+        data.materials = {}; // マテリアルも名前で引けるようにオブジェクト
+        data.activeScene = gltf.scene == null ? 0 : gltf.scene;
         gltf.scenes.forEach((v, index) => {
-            data.scenes[v.name] = new GLTFNode(v, data);
+            data.scenes[index] = new GLTFNode(v, data);
         });
     }
     // /**
