@@ -1,6 +1,54 @@
 
 const CONSOLE_OUTPUT_COLOR = 'seagreen';
 
+class GLTFNode {
+    /**
+     * ノード
+     * @param {object} currenta - このノードの情報
+     * @param {object} data - データ構造の出力先（最終的に GLTFParse.data になるオブジェクト）
+     */
+    constructor(current, data){
+        this.name     = current.name   != null ? current.name   : null;
+        this.matrix   = current.matrix != null ? current.matrix : null;
+        this.mesh     = current.mesh   != null ? current.mesh   : null;
+        this.children = [];
+
+        if(
+            current.hasOwnProperty('nodes') &&
+            Array.isArray(current.nodes) === true &&
+            current.nodes.length > 0
+        ){
+            // nodes メンバがあるということは scene
+            current.nodes.forEach((v, index) => {
+                let child = data.gltf.nodes[v];
+                let node = new GLTFNode(child, data);
+                this.children.push(node);
+                if(node.name != null){
+                    if(data.nodes.hasOwnProperty(node.name) !== true){
+                        data.nodes[node.name] = [];
+                    }
+                    data.nodes[node.name].push(node);
+                }
+            });
+        }else{
+            // scene 以外は node
+            if(Array.isArray(current.children) === true){
+                current.children.forEach((v, index) => {
+                    let child = data.gltf.nodes[v];
+                    let node = new GLTFNode(child, data);
+                    this.children.push(node);
+                    if(node.name != null){
+                        if(data.nodes.hasOwnProperty(node.name) !== true){
+                            data.nodes[node.name] = [];
+                        }
+                        data.nodes[node.name].push(node);
+                    }
+                });
+            }
+        }
+    }
+}
+
 /**
  * gltf のロードとパースを行うクラス
  * @class Loader
@@ -107,7 +155,17 @@ export default class GLTFParse {
     /**
      * @constructor
      */
-    constructor(){
+    constructor(gl){
+        /**
+         * WebGLRenderingContext
+         * @type {WebGLRenderingContext}
+         */
+        this.gl = gl;
+        /**
+         * バイナリデータをパース・変換したデータ
+         * @type {object}
+         */
+        this.data = null;
         /**
          * gltf で利用する asset メンバの格納用
          * @type {object}
@@ -133,11 +191,9 @@ export default class GLTFParse {
          * @type {any}
          */
         this.lastResponse = null;
-        /**
-         * バイナリデータをパースしたもの
-         * @type {object}
-         */
-        this.data = null;
+    }
+    setContext(gl){
+        this.gl = gl;
     }
     /**
      * glTF ファイルをロードする
@@ -183,6 +239,7 @@ export default class GLTFParse {
                     return this.parse(data);
                 })
                 .then((data) => {
+                    this.getScene(data);
                     console.log('☕', data);
                 })
                 .catch((err) => {
@@ -195,6 +252,7 @@ export default class GLTFParse {
                     return this.parse(data);
                 })
                 .then((data) => {
+                    this.getScene(data);
                     console.log('☕', data);
                 })
                 .catch((err) => {
@@ -397,7 +455,7 @@ export default class GLTFParse {
     splitBinary(gltf, bin){
         if(gltf == null || bin == null || Array.isArray(bin) !== true){return null;}
         if(gltf.hasOwnProperty('accessors') !== true || gltf.hasOwnProperty('bufferViews') !== true){return null;}
-        let binaries = {};
+        let binaries = [];
         // bufferViews を基準に走査するが、bufferViews.length > accessors.length という状況が
         // glb の場合は特に、バイナリに画像を含んだりしているのであり得るという点に注意
         gltf.bufferViews.forEach((v, index) => {
@@ -408,6 +466,38 @@ export default class GLTFParse {
             binaries[index] = data;
         });
         return binaries;
+    }
+    /**
+     * this.parse が解決し、gl のコンテキストが設定済みの場合に実行可能
+     * scene の情報を生成して返す
+     * @param {object} data
+     */
+    getScene(data){
+        let gltf      = data.gltf;
+        let accessors = data.gltf.accessors;
+        let binaries  = data.binaries;
+        let images    = data.images;
+        if(
+            this.gl == null ||
+            gltf == null ||
+            gltf.hasOwnProperty('scenes') !== true ||
+            Array.isArray(gltf.scenes) !== true ||
+            gltf.scenes.length === 0 ||
+            Array.isArray(binaries) !== true ||
+            binaries.length === 0 ||
+            Array.isArray(accessors) !== true ||
+            accessors.length === 0 ||
+            (Array.isArray(images) === true && images.length === 0)
+        ){
+            throw new Error('[gltfparse.js] invalid scenedata');
+            return;
+        }
+        // scene メンバを追加
+        data.scenes = {};
+        data.nodes = {};
+        gltf.scenes.forEach((v, index) => {
+            data.scenes[v.name] = new GLTFNode(v, data);
+        });
     }
     // /**
     //  * 分割したバイナリからバッファ類を生成して返す
