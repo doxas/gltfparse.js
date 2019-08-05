@@ -336,14 +336,14 @@ export default class GLTFParse {
             new Promise((resolve, reject) => {
                 // accessor
                 if(data.gltf.hasOwnProperty('accessors') === true && data.gltf.accessors.length > 0){
-                    data.parsed = [];
+                    data.parsedBuffers = [];
                     data.gltf.accessors.forEach((v, index) => {
                         let begin = 0;
                         if(v.hasOwnProperty('byteOffset') === true){
                             begin = v.byteOffset;
                         }
                         let func = this.getTypedArrayFunctionFromComponent(v.componentType);
-                        data.parsed[index] = {
+                        data.parsedBuffers[index] = {
                             data: new func(data.binaries[v.bufferView].arrayBuffer, begin, v.count * GLTFParse.STRIDE_TYPE[v.type]),
                             min: v.min,
                             max: v.max,
@@ -359,7 +359,7 @@ export default class GLTFParse {
                         return new Promise((res, rej) => {
                             if(v.hasOwnProperty('mimeType') === true && v.hasOwnProperty('bufferView') === true){
                                 // binary
-                                let blob = new Blob([data.binaries[v.bufferView]].arrayBuffer, {type: v.mimeType});
+                                let blob = new Blob([data.binaries[v.bufferView].arrayBuffer], {type: v.mimeType});
                                 let img = new Image();
                                 img.src = window.URL.createObjectURL(blob);
                                 res(img);
