@@ -34,7 +34,7 @@ class GLTFNode {
         };
     }
     /**
-     * ノード
+     * GLTFNode
      * @param {object} currenta - このノードの情報
      * @param {object} data - データ構造の出力先（最終的に GLTFParse.data になるオブジェクト）
      */
@@ -249,41 +249,12 @@ export default class GLTFParse {
     static get STRIDE_TYPE(){
         return {
             SCALAR: 1,
-            VEC2: 2,
-            VEC3: 3,
-            VEC4: 4,
-            MAT2: 4,
-            MAT3: 9,
-            MAT4: 16
-        };
-    }
-    /**
-     * glTF の仕様上存在する可能性のある uniform タイプ
-     * @type {object}
-     */
-    static get UNIFORM_TYPE(){
-        return {
-            BYTE:           '1i',
-            UNSIGNED_BYTE:  '1i',
-            SHORT:          '1f',
-            UNSIGNED_SHORT: '1f',
-            UNSIGNED_INT:   '1i',
-            FLOAT:          '1f',
-            FLOAT_VEC2:     '2fv',
-            FLOAT_VEC3:     '3fv',
-            FLOAT_VEC4:     '4fv',
-            INT_VEC2:       '2iv',
-            INT_VEC3:       '3iv',
-            INT_VEC4:       '4iv',
-            BOOL:           '1i',
-            BOOL_VEC2:      '2iv',
-            BOOL_VEC3:      '3iv',
-            BOOL_VEC4:      '4iv',
-            FLOAT_MAT2:     'matrix2fv',
-            FLOAT_MAT3:     'matrix3fv',
-            FLOAT_MAT4:     'matrix4fv',
-            SAMPLER_2D:     '1i',
-            SAMPLER_CUBE:   '1i'
+            VEC2:   2,
+            VEC3:   3,
+            VEC4:   4,
+            MAT2:   4,
+            MAT3:   9,
+            MAT4:   16,
         };
     }
     /**
@@ -366,7 +337,8 @@ export default class GLTFParse {
                 })
                 .then((data) => {
                     this.getScene(data);
-                    console.log('☕', data);
+                    this.data = data;
+                    resolve(data);
                 })
                 .catch((err) => {
                     console.error(err);
@@ -379,7 +351,8 @@ export default class GLTFParse {
                 })
                 .then((data) => {
                     this.getScene(data);
-                    console.log('☕', data);
+                    this.data = data;
+                    resolve(data);
                 })
                 .catch((err) => {
                     console.error(err);
@@ -626,225 +599,6 @@ export default class GLTFParse {
             data.scenes[index] = new GLTFNode(v, data);
         });
     }
-    // /**
-    //  * 分割したバイナリからバッファ類を生成して返す
-    //  * @param {WebGLRenderingContext} gl - WebGL のレンダリングコンテキスト
-    //  * @param {object} gltf - *.gltf の中身の JSON をパースしたもの
-    //  * @param {object} bin - splitBinary で分割した ArrayBuffer を含むオブジェクト
-    //  * @return {Array} 生成したバッファ（VBO or IBO）を含むオブジェクトの配列
-    //  */
-    // generateMesh(gl, gltf, bin){
-    //     if(gltf == null || bin == null || typeOf(bin) !== '[object Object]'){return null;}
-    //     if(!gltf.hasOwnProperty('nodes') || !gltf.hasOwnProperty('meshes')){return null;}
-    //     if(!gltf.hasOwnProperty('accessors') || !gltf.hasOwnProperty('bufferViews')){return null;}
-    //     let meshes = {};
-    //     let meshindex = getKeys(gltf.meshes);
-    //     meshindex.map((v, i) => {
-    //         meshes[v] = [];
-    //         if(!gltf.meshes[v].hasOwnProperty('primitives') || typeOf(gltf.meshes[v].primitives) !== '[object Array]' || gltf.meshes[v].primitives.length === 0){
-    //             meshes[v] = null;
-    //         }
-    //         gltf.meshes[v].primitives.map((w, j) => {
-    //             meshes[v][j] = {};
-    //             if(!w.hasOwnProperty('attributes') || w.attributes == null){
-    //                 meshes[v][j] = null;
-    //                 console.warn('invalid attributes in meshes ' + i);
-    //                 return;
-    //             }
-    //             let isMode = w.hasOwnProperty('mode');
-    //             let isElements = w.hasOwnProperty('indices');
-    //             let isMaterial = w.hasOwnProperty('material');
-    //             // まずインデックスバッファ（存在しなければ indices は null になるようにする）
-    //             meshes[v][j].ibo = null;
-    //             meshes[v][j].indexLength = null;
-    //             if(isElements === true){
-    //                 let index = w.indices;
-    //                 let type = gltf.accessors[index].componentType;
-    //                 let typedArrayFunc = null;
-    //                 switch(type){
-    //                     case GLTFParse.CONST.BYTE:
-    //                     case GLTFParse.CONST.UNSIGNED_BYTE:
-    //                         typedArrayFunc = Uint8Array;
-    //                         break;
-    //                     case GLTFParse.CONST.SHORT:
-    //                     case GLTFParse.CONST.UNSIGNED_SHORT:
-    //                         typedArrayFunc = Uint16Array;
-    //                         break;
-    //                     case GLTFParse.CONST.INT:
-    //                     case GLTFParse.CONST.UNSIGNED_INT:
-    //                         typedArrayFunc = Uint32Array;
-    //                         break;
-    //                 }
-    //                 if(typedArrayFunc === null){
-    //                     console.warn('invalid indices in meshes ' + i);
-    //                     return;
-    //                 }
-    //                 meshes[v][j].indices = new typedArrayFunc(bin[index]); // @@@ indices は余分にメモリ使ってるんでゆくゆくはキャッシュしないようにする
-    //                 let ibo = gl.createBuffer();
-    //                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-    //                 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, meshes[v][j].indices, gl.STATIC_DRAW);
-    //                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    //                 meshes[v][j].ibo = ibo;
-    //                 meshes[v][j].indexLength = gltf.accessors[index].count;
-    //             }
-    //             // 続いて VBO を処理する attribute 名は gltf 側に記載された semantic として出す
-    //             meshes[v][j].attributeName = Object.keys(w.attributes);
-    //             meshes[v][j].attributeStride = [];
-    //             meshes[v][j].vertexList = []; // @@@ 頂点配列は直接 VBO にすればいいのでゆくゆくは配列にキャッシュしないようにする
-    //             meshes[v][j].vboList = [];
-    //             meshes[v][j].attributeName.map((x, l) => {
-    //                 let index = w.attributes[x];
-    //                 meshes[v][j].vertexList[l] = new Float32Array(bin[index]);
-    //                 let vbo = gl.createBuffer();
-    //                 gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    //                 gl.bufferData(gl.ARRAY_BUFFER, meshes[v][j].vertexList[l], gl.STATIC_DRAW);
-    //                 gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    //                 meshes[v][j].vboList[l] = vbo;
-    //                 meshes[v][j].attributeStride[l] = GLTFParse.STRIDE_TYPE[gltf.accessors[index].type]
-    //             });
-    //             // プリミティブタイプ（描画時のプリミティブ）
-    //             meshes[v][j].primitiveType = gl.POINTS;
-    //             if(isMode === true){
-    //                 meshes[v][j].primitiveType = w.mode;
-    //             }
-    //             // マテリアル（のインデックス）
-    //             meshes[v][j].materialIndex = null;
-    //             if(isMaterial){
-    //                 meshes[v][j].materialIndex = w.material;
-    //             }
-    //         });
-    //     });
-    //     return meshes;
-    // }
-    // /**
-    //  * マテリアルを生成する
-    //  * @param {object} gltf - *.gltf の中身の JSON をパースしたもの
-    //  * @return {object} 生成したデータを含むオブジェクト
-    //  */
-    // generateMaterial(gltf){
-    //     if(gltf == null || !gltf.hasOwnProperty('materials')){return null;}
-    //     let materials = gltf.materials;
-    //     return materials;
-    // }
-    // /**
-    //  * 分割したバイナリからアニメーションを生成する
-    //  * @param {WebGLRenderingContext} gl - WebGL のレンダリングコンテキスト
-    //  * @param {object} gltf - *.gltf の中身の JSON をパースしたもの
-    //  * @param {object} bin - splitBinary で分割した ArrayBuffer を含むオブジェクト
-    //  * @return {object} 生成したデータを含むオブジェクト
-    //  */
-    // generateAnimation(gl, gltf, bin){
-    //     if(gltf == null || bin == null || typeOf(bin) !== '[object Object]'){return null;}
-    //     if(!gltf.hasOwnProperty('animations')){return null;}
-    //     if(!gltf.hasOwnProperty('accessors') || !gltf.hasOwnProperty('bufferViews')){return null;}
-    //     let animations = gltf.animations;
-    //     let aniindex = getKeys(animations);
-    //     aniindex.map((v, i) => {
-    //         animations[v].data = {};
-    //         animations[v].strides = {};
-    //         let keys = getKeys(animations[v].parameters);
-    //         keys.map((w, j) => {
-    //             let accesskey = animations[v].parameters[w];
-    //             let data = bin[accesskey];
-    //             let accessor = gltf.accessors[accesskey];
-    //             let stride = GLTFParse.STRIDE_TYPE[accessor.type];
-    //             let component = accessor.componentType;
-    //             let typedArrayFunc = Float32Array;
-    //             switch(component){
-    //                 case GLTFParse.CONST.BYTE:
-    //                     typedArrayFunc = Int8Array;
-    //                     break;
-    //                 case GLTFParse.CONST.UNSIGNED_BYTE:
-    //                     typedArrayFunc = Uint8Array;
-    //                     break;
-    //                 case GLTFParse.CONST.INT:
-    //                     typedArrayFunc = Int32Array;
-    //                     break
-    //                 case GLTFParse.CONST.UNSIGNED_INT:
-    //                     typedArrayFunc = Uint32Array;
-    //                     break;
-    //             }
-    //             animations[v].data[w] = new typedArrayFunc(data);
-    //             animations[v].strides[w] = stride;
-    //         });
-    //     });
-    //     return animations;
-    // }
-    // /**
-    //  * プログラム等の情報を gltf ファイルから読み出し WGL に食わせやすい形に整形する
-    //  * @param {WebGLRenderingContext} gl - WebGL のレンダリングコンテキスト
-    //  * @param {object} gltf - *.gltf の中身の JSON をパースしたもの
-    //  * @param {object} bin - splitBinary で分割した ArrayBuffer を含むオブジェクト
-    //  * @return {Array} 生成したシェーダやプログラムの情報を含むオブジェクトの配列
-    //  */
-    // generateProgram(gl, gltf, bin){
-    //     if(gltf == null || bin == null || typeOf(bin) !== '[object Object]'){return null;}
-    //     if(!gltf.hasOwnProperty('shaders') || !gltf.hasOwnProperty('programs') || !gltf.hasOwnProperty('techniques')){return null;}
-    //     let programs = gltf.programs;
-    //     let prgindex = getKeys(gltf.programs);
-    //     let techindex = getKeys(gltf.techniques);
-    //     techindex.map((x) => {
-    //         let tech = gltf.techniques[x];
-    //         let targetProgram = programs[tech.program];
-    //         // attribute
-    //         let attributeName = targetProgram.attributes; // a_normal, a_position etc
-    //         let attributeStride = [];
-    //         attributeName.map((w, j) => {
-    //             let parameterName = gltf.techniques[x].attributes[w]; // normal, position etc
-    //             let param = gltf.techniques[x].parameters[parameterName];
-    //             let z = 1;
-    //             if(param.hasOwnProperty('type')){
-    //                 switch(param.type){
-    //                     case GLTFParse.CONST.FLOAT:
-    //                         z = 1;
-    //                         break;
-    //                     case GLTFParse.CONST.FLOAT_VEC2:
-    //                         z = 2;
-    //                         break;
-    //                     case GLTFParse.CONST.FLOAT_VEC3:
-    //                         z = 3;
-    //                         break;
-    //                     case GLTFParse.CONST.FLOAT_VEC4:
-    //                         z = 4;
-    //                         break;
-    //                 }
-    //                 attributeStride.push(z);
-    //             }
-    //         });
-    //         // uniform
-    //         let uniformName = getKeys(tech.uniforms); // u_diffuse u_projectionMatrix etc
-    //         let uniformType = [];
-    //         let uniformValue = [];
-    //         let uniformSemantic = [];
-    //         let uniformNode = [];
-    //         let uniname = getKeys(GLTFParse.UNIFORM_TYPE);
-    //         uniformName.map((w, j) => {
-    //             let parameterName = tech.uniforms[w]; // diffuse projectionMatrix etc
-    //             let param = tech.parameters[parameterName];
-    //             for(let i = 0; i < uniname.length; ++i){
-    //                 if(param.type === GLTFParse.CONST[uniname[i]]){
-    //                     uniformType.push(GLTFParse.UNIFORM_TYPE[uniname[i]]);
-    //                     break;
-    //                 }
-    //             }
-    //             if(param.hasOwnProperty('value')){uniformValue[j] = param.value;}
-    //             if(param.hasOwnProperty('semantic')){uniformSemantic[j] = param.semantic;}
-    //             if(param.hasOwnProperty('node')){uniformNode[j] = param.node;}
-    //         });
-    //         // state
-    //         targetProgram.state = tech.states;
-    //         targetProgram.attributeName        = attributeName;   // position
-    //         targetProgram.attributeStride      = attributeStride; // 3
-    //         targetProgram.uniformName          = uniformName;     // modelViewMatrix
-    //         targetProgram.uniformType          = uniformType;     // matrix4fv
-    //         targetProgram.uniformValue         = uniformValue;    // [0, 0, 0, ...]
-    //         targetProgram.uniformSemantic      = uniformSemantic; // MODELVIEW
-    //         targetProgram.uniformNode          = uniformNode;     // xxxxxNode → nodes に同名のものがあるはず
-    //         targetProgram.fragmentShaderSource = gltf.shaders[targetProgram.fragmentShader].uri; // FS のファイル名
-    //         targetProgram.vertexShaderSource   = gltf.shaders[targetProgram.vertexShader].uri;   // VS のファイル名
-    //     });
-    //     return programs;
-    // }
     fetch(target, type){
         return new Promise((resolve, reject) => {
             let headers = new Headers({

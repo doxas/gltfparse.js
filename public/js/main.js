@@ -6,6 +6,12 @@ window.addEventListener('load', () => {
     let w = new WebGLFrame();
 
     let g = new GLTFParse();
-    g.load(PATH_STRING);
+    g.load(PATH_STRING)
+    .then((data) => {
+        console.log('🍭', data);
+    })
+    .catch((err) => {
+        console.error(err);
+    });
 });
 
