@@ -14,8 +14,149 @@ let audio;
 // shader
 let basePrg, noisePrg;
 
+// geometry
+let gltfNode = [];
+
 // const PATH_STRING = './resource/assassin_gai/scene.gltf';
 const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
+
+class Mesh {
+    constructor(mesh){
+        this.textureIsUpdate = false;
+        this.primitive       = 'POINTS';
+        this.positionVBO     = null;
+        this.normalVBO       = null;
+        this.colorVBO        = null;
+        this.texCoord0VBO    = null;
+        this.texCoord1VBO    = null;
+        this.VBO             = null;
+        this.IBO             = null;
+        this.vertexCount     = 0;
+        this.indexCount      = 0;
+        this.indexIsInt      = false;
+        this.material        = {};
+        // primitive type
+        if(mesh.hasOwnProperty('primitiveType') === true){
+            this.primitive = gl[mesh.primitiveType];
+        }
+        // attribute
+        if(mesh.hasOwnProperty('position') === true){
+            this.positionVBO = gl3.createVbo(mesh.position.data);
+            this.vertexCount = mesh.position.count;
+        }
+        if(mesh.hasOwnProperty('normal') === true){
+            this.normalVBO = gl3.createVbo(mesh.normal.data);
+            if(this.vertexCount === 0){this.vertexCount = mesh.normal.count;}
+        }
+        if(mesh.hasOwnProperty('color') === true){
+            this.colorVBO = gl3.createVbo(mesh.color.data);
+            if(this.vertexCount === 0){this.vertexCount = mesh.color.count;}
+        }
+        if(mesh.hasOwnProperty('texCoord0') === true){
+            this.texCoord0VBO = gl3.createVbo(mesh.texCoord0.data);
+            if(this.vertexCount === 0){this.vertexCount = mesh.texCoord0.count;}
+        }
+        if(mesh.hasOwnProperty('texCoord1') === true){
+            this.texCoord1VBO = gl3.createVbo(mesh.texCoord1.data);
+            if(this.vertexCount === 0){this.vertexCount = mesh.texCoord1.count;}
+        }
+        // indices
+        if(mesh.hasOwnProperty('indices') === true){
+            this.indexIsInt = mesh.indices.data instanceof Uint32Array;
+            if(this.indexIsInt === true){
+                this.IBO = gl3.createIboInt(mesh.indices.data)
+            }else{
+                this.IBO = gl3.createIbo(mesh.indices.data);
+            }
+        }
+        // material
+        let mat = mesh.material;
+        if(mat.baseColorTexture.image != null && gl3.textures[mat.baseColorTexture.index] == null){
+            gl3.createTextureFromObject(mat.baseColorTexture.image, mat.baseColorTexture.index);
+        }
+        this.material.baseColor = {
+            index: mat.baseColorTexture.index,
+            texture: gl3.textures[mat.baseColorTexture.index].texture,
+            texCoordIndex: mat.baseColorTexture.texCoordIndex,
+            factor: mat.baseColorTexture.factor,
+        };
+        if(mat.metallicRoughnessTexture.image != null && gl3.textures[mat.metallicRoughnessTexture.index] == null){
+            gl3.createTextureFromObject(mat.metallicRoughnessTexture.image, mat.metallicRoughnessTexture.index);
+        }
+        this.material.metallicRoughness = {
+            index: mat.metallicRoughnessTexture.index,
+            texture: gl3.textures[mat.metallicRoughnessTexture.index].texture,
+            texCoordIndex: mat.metallicRoughnessTexture.texCoordIndex,
+            metallicFactor: mat.metallicRoughnessTexture.metallicFactor,
+            roughnessFactor: mat.metallicRoughnessTexture.roughnessFactor,
+        };
+        if(mat.normalTexture.image != null && gl3.textures[mat.normalTexture.index] == null){
+            gl3.createTextureFromObject(mat.normalTexture.image, mat.normalTexture.index);
+        }
+        this.material.normal = {
+            index: mat.normalTexture.index,
+            texture: gl3.textures[mat.normalTexture.index].texture,
+            texCoordIndex: mat.normalTexture.texCoordIndex,
+            scale: mat.normalTexture.scale,
+        };
+        if(mat.occlusionTexture.image != null && gl3.textures[mat.occlusionTexture.index] == null){
+            gl3.createTextureFromObject(mat.occlusionTexture.image, mat.occlusionTexture.index);
+        }
+        this.material.occlusion = {
+            index: mat.occlusionTexture.index,
+            texture: gl3.textures[mat.occlusionTexture.index].texture,
+            texCoordIndex: mat.occlusionTexture.texCoordIndex,
+            strength: mat.occlusionTexture.strength,
+        };
+        if(mat.emissiveTexture.image != null && gl3.textures[mat.emissiveTexture.index] == null){
+            gl3.createTextureFromObject(mat.emissiveTexture.image, mat.emissiveTexture.index);
+        }
+        this.material.emissive = {
+            index: mat.emissiveTexture.index,
+            texture: gl3.textures[mat.emissiveTexture.index].texture,
+            texCoordIndex: mat.emissiveTexture.texCoordIndex,
+            factor: mat.emissiveTexture.factor,
+        };
+    }
+}
+
+class Node {
+    constructor(node, parentMatrix){
+        this.modelMatrixIsUpdate = false;
+        this.children            = [];
+        this.position            = [0.0, 0.0, 0.0];
+        this.rotation            = [0.0, 0.0, 0.0, 0.0];
+        this.scaling             = [1.0, 1.0, 1.0];
+        this.defaultMatrix       = node.matrix != null ? node.matrix : mat4.identity(mat4.create());
+        this.parentMatrix        = parentMatrix != null ? parentMatrix : mat4.identity(mat4.create());
+        this.mMatrix             = mat4.identity(mat4.create());
+        this.vpMatrix            = mat4.identity(mat4.create());
+        this.mvpMatrix           = mat4.identity(mat4.create());
+        this.inverseMatrix       = mat4.identity(mat4.create());
+        this.normalMatrix        = mat4.identity(mat4.create());
+
+        if(node.mesh != null && Array.isArray(node.mesh) === true){
+            this.mesh = node.mesh.map((v) => {
+                return new Mesh(v);
+            });
+        }
+
+        this.updateMatrix();
+    }
+    updateMatrix(){
+        let m = this.parentMatrix;
+        if(this.parentMatrix == null){
+            m = mat4.identity(mat4.create());
+        }
+        mat4.translate(m, this.position, m);
+        mat4.rotate(m, this.rotation[3], [this.rotation[0], this.rotation[1], this.rotation[2]] , m);
+        mat4.scale(m, this.scaling, m);
+        mat4.multiply(m, this.defaultMatrix, this.mMatrix);
+        mat4.multiply(this.vpMatrix, this.mMatrix, this.mvpMatrix);
+        mat4.inverse(this.mMatrix, this.inverseMatrix);
+        mat4.transpose(this.inverseMatrix, this.normalMatrix);
+    }
+}
 
 export default class WebGLFrame {
     static get VERSION(){return 'v0.0.1';}
@@ -151,26 +292,25 @@ export default class WebGLFrame {
         });
     }
 
-    init(gltfData){
-        // torus
-        let torusData = gl3.Mesh.torus(64, 64, 0.3, 0.7, [1.0, 1.0, 1.0, 1.0]);
-        let torusVBO = [
-            gl3.createVbo(torusData.position),
-            gl3.createVbo(torusData.normal),
-            gl3.createVbo(torusData.color),
-            gl3.createVbo(torusData.texCoord)
-        ];
-        let torusIBO = gl3.createIbo(torusData.index);
+    generateNodeFromGltf(data, parentMatrix){
+        let node = new Node(data, parentMatrix);
+        let index = gltfNode.length;
+        gltfNode.push(node);
+        if(Array.isArray(data.children) === true){
+            data.children.forEach((v) => {
+                let child = this.generateNodeFromGltf(v, gltfNode[index].mMatrix);
+                gltfNode[index].children.push(child);
+            });
+        }
+    }
 
-        // icosahedron
-        let icosaData = gl3.Mesh.icosahedron(1.0, [1.0, 1.0, 1.0, 1.0]);
-        let icosaVBO = [
-            gl3.createVbo(icosaData.position),
-            gl3.createVbo(icosaData.normal),
-            gl3.createVbo(icosaData.color),
-            gl3.createVbo(icosaData.texCoord)
-        ];
-        let icosaIBO = gl3.createIbo(icosaData.index);
+    init(gltfData){
+
+        // gltf
+        gltfData.scenes.forEach((v) => {
+            this.generateNodeFromGltf(v);
+        });
+        console.log('🍰', gltfNode);
 
         // plane
         let planePosition = [
@@ -226,7 +366,7 @@ export default class WebGLFrame {
         // audio.src[0].play();
 
         // rendering
-        render();
+        // render();
         function render(){
             nowTime = Date.now() - beginTime;
             nowTime /= 1000;
