@@ -312,8 +312,34 @@ export default class WebGLFrame {
             baseFs,
             ['position', 'normal', 'texCoord0'],
             [3, 3, 2],
-            ['mMatrix', 'mvpMatrix', 'normalMatrix', 'baseColorFactor', 'eyePosition', 'lightPosition', 'texture'],
-            ['matrix4fv', 'matrix4fv', 'matrix4fv', '4fv', '3fv', '3fv', '1i'],
+            [
+                'mMatrix',
+                'mvpMatrix',
+                'normalMatrix',
+                'baseColorFactor',
+                'lightPosition',
+                'eyePosition',
+                'baseColorTexture',
+                'metallicRoughnessTexture',
+                'normalTexture',
+                'metallicFactor',
+                'roughnessFactor',
+                'normalScale',
+            ],
+            [
+                'matrix4fv',
+                'matrix4fv',
+                'matrix4fv',
+                '4fv',
+                '3fv',
+                '3fv',
+                '1i',
+                '1i',
+                '1i',
+                '1f',
+                '1f',
+                '1f',
+            ],
         );
         // noise texture program
         noisePrg = gl3.createProgramFromSource(
@@ -409,7 +435,7 @@ export default class WebGLFrame {
         let cameraPosition = [0.0, 0.0, 5.0];
         let centerPoint    = [0.0, 0.0, 0.0];
         let upDirection    = [0.0, 1.0, 0.0];
-        let lightPosition  = [2.0, 3.0, 4.0];
+        let lightPosition  = [2.0, 2.0, 9.0];
         let ambientColor   = [0.1, 0.1, 0.1];
         let targetTexture  = 0;
 
@@ -475,9 +501,14 @@ export default class WebGLFrame {
                         v.mvpMatrix,
                         v.normalMatrix,
                         w.material.baseColor.factor,
-                        cameraPosition,
                         lightPosition,
-                        w.material.baseColor.index
+                        cameraPosition,
+                        w.material.baseColor.index,
+                        w.material.metallicRoughness.index,
+                        w.material.normal.index,
+                        w.material.metallicRoughness.metallicFactor,
+                        w.material.metallicRoughness.roughnessFactor,
+                        w.material.normal.scale,
                     ]);
                     if(w.indexCount > 0){
                         basePrg.setAttribute(w.VBO, w.IBO);
