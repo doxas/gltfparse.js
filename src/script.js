@@ -23,13 +23,13 @@ const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
 class Mesh {
     constructor(mesh){
         this.textureIsUpdate = false;
-        this.primitive       = 'POINTS';
+        this.primitive       = gl.POINTS;
         this.positionVBO     = null;
         this.normalVBO       = null;
         this.colorVBO        = null;
         this.texCoord0VBO    = null;
         this.texCoord1VBO    = null;
-        this.VBO             = null;
+        this.VBO             = [];
         this.IBO             = null;
         this.vertexCount     = 0;
         this.indexCount      = 0;
@@ -42,22 +42,27 @@ class Mesh {
         // attribute
         if(mesh.hasOwnProperty('position') === true){
             this.positionVBO = gl3.createVbo(mesh.position.data);
+            this.VBO.push(this.positionVBO);
             this.vertexCount = mesh.position.count;
         }
         if(mesh.hasOwnProperty('normal') === true){
             this.normalVBO = gl3.createVbo(mesh.normal.data);
+            this.VBO.push(this.normalVBO);
             if(this.vertexCount === 0){this.vertexCount = mesh.normal.count;}
         }
         if(mesh.hasOwnProperty('color') === true){
             this.colorVBO = gl3.createVbo(mesh.color.data);
+            this.VBO.push(this.colorVBO);
             if(this.vertexCount === 0){this.vertexCount = mesh.color.count;}
         }
         if(mesh.hasOwnProperty('texCoord0') === true){
             this.texCoord0VBO = gl3.createVbo(mesh.texCoord0.data);
+            this.VBO.push(this.texCoord0VBO);
             if(this.vertexCount === 0){this.vertexCount = mesh.texCoord0.count;}
         }
         if(mesh.hasOwnProperty('texCoord1') === true){
             this.texCoord1VBO = gl3.createVbo(mesh.texCoord1.data);
+            this.VBO.push(this.texCoord1VBO);
             if(this.vertexCount === 0){this.vertexCount = mesh.texCoord1.count;}
         }
         // indices
@@ -278,10 +283,10 @@ export default class WebGLFrame {
         basePrg = gl3.createProgramFromSource(
             baseVs,
             baseFs,
-            ['position', 'normal', 'color', 'texCoord'],
-            [3, 3, 4, 2],
-            ['mMatrix', 'mvpMatrix', 'normalMatrix', 'eyePosition', 'lightPosition', 'ambient', 'texture'],
-            ['matrix4fv', 'matrix4fv', 'matrix4fv', '3fv', '3fv', '3fv', '1i'],
+            ['position', 'normal', 'texCoord0'],
+            [3, 3, 2],
+            ['mMatrix', 'mvpMatrix', 'normalMatrix', 'baseColorFactor', 'eyePosition', 'lightPosition', 'texture'],
+            ['matrix4fv', 'matrix4fv', 'matrix4fv', '4fv', '3fv', '3fv', '1i'],
         );
         // noise texture program
         noisePrg = gl3.createProgramFromSource(
@@ -307,8 +312,8 @@ export default class WebGLFrame {
         });
     }
 
-    generateNodeFromGltf(data, parentMatrix){
-        let node = new Node(data, parentMatrix);
+    generateNodeFromGltf(data, parentMatrix, root){
+        let node = new Node(data, parentMatrix, root);
         let index = gltfNode.length;
         gltfNode.push(node);
         if(Array.isArray(data.children) === true){
@@ -317,6 +322,7 @@ export default class WebGLFrame {
                 gltfNode[index].children.push(child);
             });
         }
+        return node;
     }
 
     init(gltfData){
@@ -422,44 +428,51 @@ export default class WebGLFrame {
             });
 
             // render to framebuffer ==========================================
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer.framebuffer);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            // gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer.framebuffer);
             gl3.sceneView(0, 0, canvasWidth, canvasHeight);
             gl3.sceneClear([0.3, 0.3, 0.4, 1.0], 1.0);
 
             // program
             basePrg.useProgram();
-            basePrg.setAttribute(icosaVBO, icosaIBO);
-            // basePrg.setAttribute(torusVBO, torusIBO);
 
-            // model and draw
-            mat4.identity(mMatrix);
-            mat4.translate(mMatrix, [0.0, 0.0, Math.sin(nowTime) * 0.25], mMatrix);
-            mat4.rotate(mMatrix, nowTime, [1.0, 1.0, 1.0], mMatrix);
-            mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
-            mat4.inverse(mMatrix, invMatrix);
-            mat4.transpose(invMatrix, normalMatrix);
-            basePrg.pushShader([
-                mMatrix,
-                mvpMatrix,
-                normalMatrix,
-                cameraPosition,
-                lightPosition,
-                ambientColor,
-                targetTexture
-            ]);
-            gl3.drawElements(gl.TRIANGLES, icosaData.index.length);
-            // gl3.drawElements(gl.TRIANGLES, torusData.index.length);
+            // meshes
+            gltfNode.forEach((v) => {
+                if(Array.isArray(v.mesh) !== true){return;}
+                v.mesh.forEach((w) => {
+                    basePrg.pushShader([
+                        v.mMatrix,
+                        v.mvpMatrix,
+                        v.normalMatrix,
+                        w.material.baseColor.factor,
+                        cameraPosition,
+                        lightPosition,
+                        w.material.baseColor.index
+                    ]);
+                    if(w.indexCount > 0){
+                        basePrg.setAttribute(w.VBO, w.IBO);
+                        if(w.indexIsInt === true){
+                            gl3.drawElementsInt(w.primitive, w.indexCount);
+                        }else{
+                            gl3.drawElements(w.primitive, w.indexCount);
+                        }
+                    }else{
+                        basePrg.setAttribute(w.VBO);
+                        gl3.drawArrays(w.primitive, w.vertexCount);
+                    }
+                });
+            });
 
             // render to canvas
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl3.sceneView(0, 0, canvasWidth, canvasHeight);
-            gl3.sceneClear([0.0, 0.0, 0.0, 1.0], 1.0);
-
-            // program
-            noisePrg.useProgram();
-            noisePrg.setAttribute(planeVBO, planeIBO);
-            noisePrg.pushShader([1, [canvasWidth, canvasHeight], nowTime]);
-            gl3.drawElements(gl.TRIANGLES, planeIndex.length);
+            // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            // gl3.sceneView(0, 0, canvasWidth, canvasHeight);
+            // gl3.sceneClear([0.0, 0.0, 0.0, 1.0], 1.0);
+            //
+            // // program
+            // noisePrg.useProgram();
+            // noisePrg.setAttribute(planeVBO, planeIBO);
+            // noisePrg.pushShader([1, [canvasWidth, canvasHeight], nowTime]);
+            // gl3.drawElements(gl.TRIANGLES, planeIndex.length);
 
             // final
             gl.flush();
