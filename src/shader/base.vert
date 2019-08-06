@@ -6,7 +6,7 @@ uniform   mat4 mMatrix;
 uniform   mat4 mvpMatrix;
 uniform   mat4 normalMatrix;
 
-uniform   vec4 baesColorFactor;
+uniform   vec4 baseColorFactor;
 
 varying   vec3 vPosition;
 varying   vec3 vNormal;
