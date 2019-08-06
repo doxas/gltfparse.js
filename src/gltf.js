@@ -408,6 +408,7 @@ export default class GLTFParse {
             magic: magic,
             version: version[0],
             length: length[0],
+            chunk: chunk,
             chunkLength: chunkLength[0],
             bufferBegin: 20 + chunkLength[0],
             type: type,
@@ -481,7 +482,9 @@ export default class GLTFParse {
                     reject(new Error('not found buffers in glb'));
                     return;
                 }
-                let begin = glb.bufferBegin;
+                let length = new Uint32Array(glb.data, 0, 1);
+                let type = String.fromCharCode.apply(null, new Uint8Array(glb.data, 4, 4));
+                let begin = 8 + glb.bufferBegin;
                 let buffers = [];
                 gltf.buffers.forEach((v, index) => {
                     // glb では bin ファイルではなく同じバイナリにすべて含まれるものとして処理する
