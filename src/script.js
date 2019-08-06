@@ -149,11 +149,38 @@ class Node {
 
         this.updateMatrix();
     }
+    setPosition(v){
+        if(
+            (Array.isArray(v) === true && v.length === 3) ||
+            (v instanceof Float32Array === true && v.length === 3)
+        ){
+            this.position = v;
+            this.modelMatrixIsUpdate = true;
+        }
+    }
+    setRotate(angle, v){
+        if(
+            (angle != null && Array.isArray(v) === true && v.length === 3) ||
+            (angle != null && v instanceof Float32Array === true && v.length === 3)
+        ){
+            this.rotation = [v[0], v[1], v[2], angle];
+            this.modelMatrixIsUpdate = true;
+        }
+    }
+    setScale(v){
+        if(
+            (Array.isArray(v) === true && v.length === 3) ||
+            (v instanceof Float32Array === true && v.length === 3)
+        ){
+            this.scaling = v;
+            this.modelMatrixIsUpdate = true;
+        }
+    }
     updateMatrix(vpMatrix){
-        let m = this.parentMatrix;
+        let m = mat4.identity(mat4.create());
         let vp = vpMatrix;
-        if(this.parentMatrix == null){
-            m = mat4.identity(mat4.create());
+        if(this.parentMatrix != null){
+            mat4.multiply(m, this.parentMatrix, m);
         }
         if(vp == null){
             vp = this.vpMatrix;
@@ -373,6 +400,8 @@ export default class WebGLFrame {
         // gl flags
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.CULL_FACE);
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONW_MINUS_SRC_ALPHA, gl.ONE, gl.ONE);
 
         // variables
         let beginTime = Date.now();
@@ -424,6 +453,7 @@ export default class WebGLFrame {
             gltfNode.forEach((v) => {
                 if(v.isRoot === true){
                     v.updateMatrix(vpMatrix);
+                    v.setRotate(nowTime, [1.0, 0.0, 0.0]);
                 }
             });
 
