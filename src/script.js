@@ -121,7 +121,8 @@ class Mesh {
 }
 
 class Node {
-    constructor(node, parentMatrix){
+    constructor(node, parentMatrix, root){
+        this.isRoot              = root === true;
         this.modelMatrixIsUpdate = false;
         this.children            = [];
         this.position            = [0.0, 0.0, 0.0];
@@ -143,18 +144,32 @@ class Node {
 
         this.updateMatrix();
     }
-    updateMatrix(){
+    updateMatrix(vpMatrix){
         let m = this.parentMatrix;
+        let vp = vpMatrix;
         if(this.parentMatrix == null){
             m = mat4.identity(mat4.create());
+        }
+        if(vp == null){
+            vp = this.vpMatrix;
+        }else{
+            this.vpMatrix = vp;
         }
         mat4.translate(m, this.position, m);
         mat4.rotate(m, this.rotation[3], [this.rotation[0], this.rotation[1], this.rotation[2]] , m);
         mat4.scale(m, this.scaling, m);
         mat4.multiply(m, this.defaultMatrix, this.mMatrix);
-        mat4.multiply(this.vpMatrix, this.mMatrix, this.mvpMatrix);
+        mat4.multiply(vp, this.mMatrix, this.mvpMatrix);
         mat4.inverse(this.mMatrix, this.inverseMatrix);
         mat4.transpose(this.inverseMatrix, this.normalMatrix);
+
+        this.modelMatrixIsUpdate = false;
+
+        this.children.forEach((v, index) => {
+            // 子ノードの親行列を更新してから再計算させる
+            v.parentMatrix = this.mMatrix;
+            v.updateMatrix(vp);
+        });
     }
 }
 
@@ -190,7 +205,7 @@ export default class WebGLFrame {
 
         audio = new gl3.Audio(0.5, 0.5);
         // audio.load('sound/amairo.mp3', 0, true, true, () => {
-            gl3.createTextureFromFile('./resource/snoise.png', 0, () => {
+            // gl3.createTextureFromFile('./resource/snoise.png', 0, () => {
                 this.shaderLoader();
                 this.gltfLoader()
                 .then((data) => {
@@ -199,7 +214,7 @@ export default class WebGLFrame {
                 .catch((err) => {
                     console.error(err);
                 });
-            });
+            // });
         // });
     }
 
@@ -308,7 +323,8 @@ export default class WebGLFrame {
 
         // gltf
         gltfData.scenes.forEach((v) => {
-            this.generateNodeFromGltf(v);
+            // シーンレベルで forEach するので、これがルートノードになる（第三引数）
+            this.generateNodeFromGltf(v, null, true);
         });
         console.log('🍰', gltfNode);
 
@@ -366,7 +382,7 @@ export default class WebGLFrame {
         // audio.src[0].play();
 
         // rendering
-        // render();
+        render();
         function render(){
             nowTime = Date.now() - beginTime;
             nowTime /= 1000;
@@ -397,6 +413,13 @@ export default class WebGLFrame {
                 10.0,
                 vMatrix, pMatrix, vpMatrix
             );
+
+            // gltf update
+            gltfNode.forEach((v) => {
+                if(v.isRoot === true){
+                    v.updateMatrix(vpMatrix);
+                }
+            });
 
             // render to framebuffer ==========================================
             gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer.framebuffer);
