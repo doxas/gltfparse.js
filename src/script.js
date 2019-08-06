@@ -14,6 +14,9 @@ let audio;
 // shader
 let basePrg, noisePrg;
 
+// const PATH_STRING = './resource/assassin_gai/scene.gltf';
+const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
+
 export default class WebGLFrame {
     static get VERSION(){return 'v0.0.1';}
     constructor(){
@@ -48,7 +51,13 @@ export default class WebGLFrame {
         // audio.load('sound/amairo.mp3', 0, true, true, () => {
             gl3.createTextureFromFile('./resource/snoise.png', 0, () => {
                 this.shaderLoader();
-                this.init();
+                this.gltfLoader()
+                .then((data) => {
+                    this.init(data);
+                })
+                .catch((err) => {
+                    console.error(err);
+                });
             });
         // });
     }
@@ -127,10 +136,22 @@ export default class WebGLFrame {
             ['textureUnit', 'resolution', 'time'],
             ['1i', '2fv', '1f'],
         );
-        this.init();
     }
 
-    init(){
+    gltfLoader(){
+        return new Promise((resolve, reject) => {
+            new GLTFParse().load(PATH_STRING)
+            .then((data) => {
+                console.log('🍭', data);
+                resolve(data);
+            })
+            .catch((err) => {
+                reject(err);
+            });
+        });
+    }
+
+    init(gltfData){
         // torus
         let torusData = gl3.Mesh.torus(64, 64, 0.3, 0.7, [1.0, 1.0, 1.0, 1.0]);
         let torusVBO = [
