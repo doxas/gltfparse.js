@@ -536,8 +536,12 @@ export default class GLTFParse {
                                 // binary
                                 let blob = new Blob([data.binaries[v.bufferView].arrayBuffer], {type: v.mimeType});
                                 let img = new Image();
-                                img.src = window.URL.createObjectURL(blob);
-                                res(img);
+                                let objectUrl = window.URL.createObjectURL(blob);
+                                img.addEventListener('load', () => {
+                                    window.URL.revokeObjectURL(objectUrl);
+                                    res(img);
+                                }, false);
+                                img.src = objectUrl;
                             }else if(v.hasOwnProperty('uri') === true){
                                 // fetch file
                                 let img = new Image();
