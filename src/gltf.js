@@ -78,12 +78,12 @@ class GLTFNode {
                     let baseColorImage                 = null;
                     let baseColorImageIndex            = 0;
                     let baseColorTexCoordIndex         = 0;
-                    let baseColorFactor                = null;
+                    let baseColorFactor                = [1.0, 1.0, 1.0, 1.0];
                     let metallicRoughnessImage         = null;
                     let metallicRoughnessImageIndex    = 0;
                     let metallicRoughnessTexCoordIndex = 0;
-                    let metallicFactor                 = null;
-                    let roughnessFactor                = null;
+                    let metallicFactor                 = 0.5;
+                    let roughnessFactor                = 0.5;
                     if(material.hasOwnProperty('pbrMetallicRoughness') === true){
                         if(material.pbrMetallicRoughness.hasOwnProperty('baseColorTexture') === true){
                             baseColorImageIndex = material.pbrMetallicRoughness.baseColorTexture.index;
@@ -112,15 +112,15 @@ class GLTFNode {
                     let normalImage            = null;
                     let normalImageIndex       = 0;
                     let normalTexCoordIndex    = 0;
-                    let normalScale            = null;
+                    let normalScale            = 1.0;
                     let occlusionImage         = null;
                     let occlusionImageIndex    = 0;
                     let occlusionTexCoordIndex = 0;
-                    let occlusionStrength      = null;
+                    let occlusionStrength      = 1.0;
                     let emissiveImage          = null;
                     let emissiveImageIndex     = 0;
                     let emissiveTexCoordIndex  = 0;
-                    let emissiveFactor         = null;
+                    let emissiveFactor         = [0.0, 0.0, 0.0];
                     if(material.hasOwnProperty('normalTexture') === true){
                         normalImageIndex = material.normalTexture.index;
                         normalImage = data.images[normalImageIndex];
