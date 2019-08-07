@@ -1,28 +1,36 @@
-precision highp float;
+precision mediump float;
 uniform vec3      lightPosition;
-uniform vec3      eyePosition;
-
 uniform sampler2D baseColorTexture;
 uniform sampler2D metallicRoughnessTexture;
 uniform sampler2D normalTexture;
+uniform sampler2D occlusionTexture;
+uniform sampler2D emissiveTexture;
+uniform bool      baseColorTexCoordZero;
+uniform bool      metallicRoughnessTexCoordZero;
+uniform bool      normalTexCoordZero;
+uniform bool      occlusionTexCoordZero;
+uniform bool      emissiveTexCoordZero;
+uniform bool      baseColorTextureExists;
+uniform bool      metallicRoughnessTextureExists;
+uniform bool      normalTextureExists;
+uniform bool      occlusionTextureExists;
+uniform bool      emissiveTextureExists;
+uniform vec4      baseColorFactor;
 uniform float     metallicFactor;
 uniform float     roughnessFactor;
 uniform float     normalScale;
-/* uniform float     occlusionStrength; */
-/* uniform float     emissiveFactor;    */
+uniform float     occlusionStrength;
+uniform vec3      emissiveFactor;
+uniform bvec4     flags; // (gamma, none, none, none)
 
-varying vec3      vPosition;
 varying vec3      vNormal;
-varying vec4      vColor; // acctual base color factor
-varying vec2      vTexCoord;
+varying vec2      vTexCoord0;
+varying vec2      vTexCoord1;
 varying vec3      vEye;
 
 // defines
 #define PI 3.14159265359
 #define PI2 6.28318530718
-#define RECIPROCAL_PI 0.31830988618
-#define RECIPROCAL_PI2 0.15915494
-#define LOG2 1.442695
 #define EPSILON 1e-6
 
 struct IncidentLight {
@@ -51,6 +59,9 @@ struct DirectionalLight {
     vec3 color;
 };
 
+vec4 correctGamma(vec4 color){
+    return vec4(pow(color.rgb, vec3(2.2)), color.a);
+}
 float saturate(float v){
     return clamp(v, 0.0, 1.0);
 }
@@ -144,22 +155,49 @@ void RE_Direct(
 // ============================================================================
 
 void main(){
-    // base
-    /* vec4 baseColor = correctGamma(texture2D(baseColorTexture, vTexCoord)) * vColor; */
-    vec4 baseColor = texture2D(baseColorTexture, vTexCoord) * vColor;
+    vec2 texCoord = vec2(0.0);
+    // base color -------------------------------------------------------------
+    vec4 baseColor = baseColorFactor;
+    if(baseColorTextureExists == true){
+        texCoord = baseColorTexCoordZero == true ? vTexCoord0 : vTexCoord1;
+        baseColor = texture2D(baseColorTexture, texCoord) * baseColorFactor;
+    }
+    if(flags.x == true){
+        baseColor = correctGamma(baseColor);
+    }
+    // metallic roughness -----------------------------------------------------
     vec3 albedo = baseColor.rgb;
-    // metallic roughness
-    vec4 mrColor = texture2D(metallicRoughnessTexture, vTexCoord);
-    float roughness = mrColor.g * roughnessFactor;
-    float metallic = mrColor.b * metallicFactor;
-    // TODO: MR のテクスチャ無い場合あり得ること考慮してない
-    roughness = roughnessFactor;
-    metallic = metallicFactor;
+    float roughness = roughnessFactor;
+    float metallic = metallicFactor;
+    if(metallicRoughnessTextureExists == true){
+        texCoord = metallicRoughnessTexCoordZero == true ? vTexCoord0 : vTexCoord1;
+        vec4 metallicRoughnessColor = texture2D(metallicRoughnessTexture, texCoord);
+        roughness *= metallicRoughnessColor.g;
+        metallic *= metallicRoughnessColor.b;
+    }
+    // normal -----------------------------------------------------------------
+    vec3 normal = normalize(vNormal);
+    if(normalTextureExists == true){
+        texCoord = normalTexCoordZero == true ? vTexCoord0 : vTexCoord1;
+        /* normal = normalize(texture2D(normalTexture, texCoord).rgb * 2.0 - 1.0) * normalScale; */
+    }
+    // normal -----------------------------------------------------------------
+    float occlusion = occlusionStrength;
+    if(occlusionTextureExists == true){
+        texCoord = occlusionTexCoordZero == true ? vTexCoord0 : vTexCoord1;
+        /* occlusion = texture2D(occlusionTexture, texCoord).r * occlusionStrength; */
+    }
+    // emissive ---------------------------------------------------------------
+    vec3 emissive = emissiveFactor;
+    if(emissiveTextureExists == true){
+        texCoord = emissiveTexCoordZero == true ? vTexCoord0 : vTexCoord1;
+        /* emissive = texture2D(emissiveTexture, texCoord).rgb; */
+    }
 
     // geometry
     GeometricContext geometry;
     geometry.position = -vEye;
-    geometry.normal   = normalize(vNormal);
+    geometry.normal   = normalize(normal);
     geometry.viewDir  = normalize(vEye);
     // material
     Material material;
@@ -170,7 +208,6 @@ void main(){
     DirectionalLight directionalLight = DirectionalLight(normalize(lightPosition), vec3(1.0));
     IncidentLight directLight;
     ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
-    vec3 emissive = vec3(0.0);
     getDirectionalDirectLightIrradiance(directionalLight, geometry, directLight);
     RE_Direct(directLight, geometry, material, reflectedLight);
 
@@ -180,14 +217,6 @@ void main(){
                          reflectedLight.indirectDiffuse +
                          reflectedLight.indirectSpecular;
 
-    gl_FragColor = vec4(outgoingLight, baseColor.a);
-
-    // normal
-    vec4 normalColor = texture2D(normalTexture, vTexCoord);
-    vec3 normal = normalize((normalColor.rgb - 0.5) * 2.0) * normalScale;
-    vec3 light = lightPosition - vPosition;
-    vec3 eye   = vPosition - eyePosition;
-    // TODO: とりあえず法線マップいったん無効化
-    /* tangent(vNormal, light, eye); */
+    gl_FragColor = vec4(outgoingLight * occlusion, baseColor.a);
 }
 
