@@ -7,7 +7,7 @@ import noiseFs from './shader/noise.frag';
 import glcubic from './gl3Core.js';
 
 // variable ===============================================================
-let gl3, gl, run, mat4, qtn, count, nowTime, framebuffer;
+let gl3, gl, run, vec3, mat4, qtn, count, nowTime, framebuffer;
 let canvas, canvasWidth, canvasHeight;
 let audio;
 
@@ -191,7 +191,7 @@ class Node {
             (angle != null && Array.isArray(v) === true && v.length === 3) ||
             (angle != null && v instanceof Float32Array === true && v.length === 3)
         ){
-            this.rotation = [v[0], v[1], v[2], angle];
+            this.rotation = qtn.rotate(angle, vec3.normalize(v));
             this.modelMatrixIsUpdate = true;
         }
     }
@@ -264,6 +264,7 @@ export default class WebGLFrame {
         run           = true;
         canvas        = gl3.canvas;
         gl            = gl3.gl;
+        vec3          = gl3.Math.Vec3;
         mat4          = gl3.Math.Mat4;
         qtn           = gl3.Math.Qtn;
         canvasWidth   = window.innerWidth;
@@ -300,16 +301,16 @@ export default class WebGLFrame {
             }
         }, false);
         window.addEventListener('resize', () => {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.activeTexture(gl.TEXTURE1);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            gl3.deleteFramebuffer(framebuffer);
+            // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            // gl.activeTexture(gl.TEXTURE1);
+            // gl.bindTexture(gl.TEXTURE_2D, null);
+            // gl3.deleteFramebuffer(framebuffer);
             canvasWidth = window.innerWidth;
             canvasHeight = window.innerHeight;
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
-            framebuffer = gl3.createFramebuffer(canvasWidth, canvasHeight, 1);
-            gl.bindTexture(gl.TEXTURE_2D, framebuffer.texture);
+            // framebuffer = gl3.createFramebuffer(canvasWidth, canvasHeight, 1);
+            // gl.bindTexture(gl.TEXTURE_2D, framebuffer.texture);
         }, false);
     }
 
@@ -501,7 +502,8 @@ export default class WebGLFrame {
             // gltf update
             gltfNode.forEach((v) => {
                 if(v.isRoot === true){
-                    v.setPosition([15000.0, -10000.0, 70000.0]);
+                    v.setRotate(nowTime * 0.1, [0, 1, 0]);
+                    // v.setPosition([15000.0, -10000.0, 70000.0]);
                     v.updateMatrix(vMatrix, pMatrix);
                 }
             });
