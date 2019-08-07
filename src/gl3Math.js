@@ -56,6 +56,21 @@ class Mat4 {
         return dest;
     }
     /**
+     * 行列を複製する（参照に注意）
+     * @param {Float32Array.<Mat4>} base - 複製する行列
+     * @param {Float32Array.<Mat4>} dest - 複製した行列
+     * @return {Float32Array.<Mat4>} 複製した行列
+     */
+    static copy(base, dest){
+        let out = dest;
+        if(dest == null){out = Mat4.create()}
+        out[0]  = base[0];  out[1]  = base[1];  out[2]  = base[2];  out[3]  = base[3];
+        out[4]  = base[4];  out[5]  = base[5];  out[6]  = base[6];  out[7]  = base[7];
+        out[8]  = base[8];  out[9]  = base[9];  out[10] = base[10]; out[11] = base[11];
+        out[12] = base[12]; out[13] = base[13]; out[14] = base[14]; out[15] = base[15];
+        return out;
+    }
+    /**
      * 行列を乗算する（参照に注意・戻り値としても結果を返す）
      * @param {Float32Array.<Mat4>} mat0 - 乗算される行列
      * @param {Float32Array.<Mat4>} mat1 - 乗算する行列
@@ -415,6 +430,35 @@ class Mat4 {
             halfWidth + v[0] * halfWidth,
             halfHeight - v[1] * halfHeight
         ];
+    }
+    static compose(translation, qtn, scale, dest){
+        let out = dest;
+        if(dest == null){out = Mat4.create();}
+        let x = qtn[0], y = qtn[1], z = qtn[2], w = qtn[3];
+        let x2 = x + x,  y2 = y + y,  z2 = z + z;
+        let xx = x * x2, xy = x * y2, xz = x * z2;
+        let yy = y * y2, yz = y * z2, zz = z * z2;
+        let wx = w * x2, wy = w * y2, wz = w * z2;
+        let sx = scale[0], sy = scale[1], sz = scale[2];
+
+        out[0]  = (1 - (yy + zz)) * sx;
+        out[1]  = (xy + wz) * sx;
+        out[2]  = (xz - wy) * sx;
+        out[3]  = 0;
+        out[4]  = (xy - wz) * sy;
+        out[5]  = (1 - (xx + zz)) * sy;
+        out[6]  = (yz + wx) * sy;
+        out[7]  = 0;
+        out[8]  = (xz + wy) * sz;
+        out[9]  = (yz - wx) * sz;
+        out[10] = (1 - (xx + yy)) * sz;
+        out[11] = 0;
+        out[12] = translation[0];
+        out[13] = translation[1];
+        out[14] = translation[2];
+        out[15] = 1;
+
+        return out;
     }
 }
 
