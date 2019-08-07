@@ -62,13 +62,18 @@ class Mesh {
         }
         if(mesh.hasOwnProperty('texCoord0') === true){
             this.texCoord0VBO = gl3.createVbo(mesh.texCoord0.data);
-            this.VBO.push(this.texCoord0VBO);
             if(this.vertexCount === 0){this.vertexCount = mesh.texCoord0.count;}
         }
         if(mesh.hasOwnProperty('texCoord1') === true){
             this.texCoord1VBO = gl3.createVbo(mesh.texCoord1.data);
-            this.VBO.push(this.texCoord1VBO);
             if(this.vertexCount === 0){this.vertexCount = mesh.texCoord1.count;}
+        }
+        if(this.texCoord0VBO != null && this.texCoord1VBO != null){
+            this.VBO.push(this.texCoord0VBO, this.texCoord1VBO);
+        }else if(this.texCoord0VBO != null && this.texCoord1VBO == null){
+            this.VBO.push(this.texCoord0VBO, this.texCoord0VBO);
+        }else if(this.texCoord0VBO == null && this.texCoord1VBO != null){
+            this.VBO.push(this.texCoord1VBO, this.texCoord1VBO);
         }
         // indices
         if(mesh.hasOwnProperty('indices') === true){
@@ -331,37 +336,62 @@ export default class WebGLFrame {
         basePrg = gl3.createProgramFromSource(
             baseVs,
             baseFs,
-            ['position', 'normal', 'texCoord0'],
-            [3, 3, 2],
+            ['position', 'normal', 'texCoord0', 'texCoord1'],
+            [3, 3, 2, 2],
             [
-                'mMatrix',
                 'mvMatrix',
                 'mvpMatrix',
                 'normalMatrix',
-                'baseColorFactor',
                 'lightPosition',
-                'eyePosition',
                 'baseColorTexture',
                 'metallicRoughnessTexture',
                 'normalTexture',
+                'occlusionTexture',
+                'emissiveTexture',
+                'baseColorTexCoordZero',
+                'metallicRoughnessTexCoordZero',
+                'normalTexCoordZero',
+                'occlusionTexCoordZero',
+                'emissiveTexCoordZero',
+                'baseColorTextureExists',
+                'metallicRoughnessTextureExists',
+                'normalTextureExists',
+                'occlusionTextureExists',
+                'emissiveTextureExists',
+                'baseColorFactor',
                 'metallicFactor',
                 'roughnessFactor',
                 'normalScale',
-            ],
-            [
+                'occlusionStrength',
+                'emissiveFactor',
+                'flags',
+            ], [
                 'matrix4fv',
                 'matrix4fv',
                 'matrix4fv',
-                'matrix4fv',
+                '3fv',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
+                '1i',
                 '4fv',
+                '1f',
+                '1f',
+                '1f',
+                '1f',
                 '3fv',
-                '3fv',
-                '1i',
-                '1i',
-                '1i',
-                '1f',
-                '1f',
-                '1f',
+                '4iv',
             ],
         );
         // noise texture program
@@ -529,19 +559,32 @@ export default class WebGLFrame {
                 if(Array.isArray(v.mesh) !== true){return;}
                 v.mesh.forEach((w) => {
                     basePrg.pushShader([
-                        v.mMatrix,
                         v.mvMatrix,
                         v.mvpMatrix,
                         v.normalMatrix,
-                        w.material.baseColor.factor,
                         lightPosition,
-                        cameraPosition,
                         w.material.baseColor.index,
                         w.material.metallicRoughness.index,
                         w.material.normal.index,
+                        w.material.occlusion.index,
+                        w.material.emissive.index,
+                        w.material.baseColor.texCoordIndex,
+                        w.material.metallicRoughness.texCoordIndex,
+                        w.material.normal.texCoordIndex,
+                        w.material.occlusion.texCoordIndex,
+                        w.material.emissive.texCoordIndex,
+                        w.material.baseColor.texture != null,
+                        w.material.metallicRoughness.texture != null,
+                        w.material.normal.texture != null,
+                        w.material.occlusion.texture != null,
+                        w.material.emissive.texture != null,
+                        w.material.baseColor.factor,
                         w.material.metallicRoughness.metallicFactor,
                         w.material.metallicRoughness.roughnessFactor,
                         w.material.normal.scale,
+                        w.material.occlusion.strength,
+                        w.material.emissive.factor,
+                        [false, false, false, false],
                     ]);
                     if(w.indexCount > 0){
                         basePrg.setAttribute(w.VBO, w.IBO);
