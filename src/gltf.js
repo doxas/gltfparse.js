@@ -39,9 +39,12 @@ class GLTFNode {
      * @param {object} data - データ構造の出力先（最終的に GLTFParse.data になるオブジェクト）
      */
     constructor(current, data){
-        this.name     = current.name   != null ? current.name   : null;
-        this.matrix   = current.matrix != null ? current.matrix : null;
-        this.mesh     = current.mesh   != null ? current.mesh   : null;
+        this.name        = current.name   != null ? current.name   : null;
+        this.mesh        = current.mesh   != null ? current.mesh   : null;
+        this.matrix      = current.matrix != null ? current.matrix : null;
+        this.translation = current.translation != null ? current.translation : null;
+        this.rotation    = current.rotation    != null ? current.rotation : null;
+        this.scale       = current.scale       != null ? current.scale : null;
         this.children = [];
 
         // mesh exists
@@ -65,11 +68,11 @@ class GLTFNode {
                     // テクスチャ座標は texCoord0 と texCoord1 を取り得るので既定値を 0 にする
                     // その他の係数は存在確認を行って適宜キャッシュする
                     let baseColorImage                 = null;
-                    let baseColorImageIndex            = 0;
+                    let baseColorImageIndex            = -1;
                     let baseColorTexCoordIndex         = 0;
                     let baseColorFactor                = null;
                     let metallicRoughnessImage         = null;
-                    let metallicRoughnessImageIndex    = 0;
+                    let metallicRoughnessImageIndex    = -1;
                     let metallicRoughnessTexCoordIndex = 0;
                     let metallicFactor                 = null;
                     let roughnessFactor                = null;
@@ -99,15 +102,15 @@ class GLTFNode {
                         }
                     }
                     let normalImage            = null;
-                    let normalImageIndex       = 0;
+                    let normalImageIndex       = -1;
                     let normalTexCoordIndex    = 0;
                     let normalScale            = null;
                     let occlusionImage         = null;
-                    let occlusionImageIndex    = 0;
+                    let occlusionImageIndex    = -1;
                     let occlusionTexCoordIndex = 0;
                     let occlusionStrength      = null;
                     let emissiveImage          = null;
-                    let emissiveImageIndex     = 0;
+                    let emissiveImageIndex     = -1;
                     let emissiveTexCoordIndex  = 0;
                     let emissiveFactor         = null;
                     if(material.hasOwnProperty('normalTexture') === true){
@@ -580,6 +583,9 @@ export default class GLTFParse {
         // bufferViews を基準に走査するが、bufferViews.length > accessors.length という状況が
         // glb の場合は特に、バイナリに画像を含んだりしているのであり得るという点に注意
         gltf.bufferViews.forEach((v, index) => {
+            if(v.hasOwnProperty('byteOffset') !== true){
+                v.byteOffset = 0;
+            }
             let data = {
                 bufferView: v,
                 arrayBuffer: bin[v.buffer].slice(v.byteOffset, v.byteOffset + v.byteLength)

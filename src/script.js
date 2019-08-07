@@ -22,7 +22,8 @@ let gRoughness = 0.5;
 let gMetallic  = 0.5;
 
 // const PATH_STRING = './resource/assassin_gai/scene.gltf';
-const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
+// const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
+const PATH_STRING = './resource/E6.glb';
 
 class Mesh {
     constructor(mesh){
@@ -80,49 +81,69 @@ class Mesh {
         }
         // material
         let mat = mesh.material;
+        let texture = null;
         if(mat.baseColorTexture.image != null && gl3.textures[mat.baseColorTexture.index] == null){
             gl3.createTextureFromObject(mat.baseColorTexture.image, mat.baseColorTexture.index);
         }
+        if(gl3.textures[mat.baseColorTexture.index] != null){
+            texture = gl3.textures[mat.baseColorTexture.index].texture;
+        }
         this.material.baseColor = {
             index: mat.baseColorTexture.index,
-            texture: gl3.textures[mat.baseColorTexture.index].texture,
+            texture: texture,
             texCoordIndex: mat.baseColorTexture.texCoordIndex,
             factor: mat.baseColorTexture.factor,
         };
+        texture = null;
         if(mat.metallicRoughnessTexture.image != null && gl3.textures[mat.metallicRoughnessTexture.index] == null){
             gl3.createTextureFromObject(mat.metallicRoughnessTexture.image, mat.metallicRoughnessTexture.index);
         }
+        if(gl3.textures[mat.metallicRoughnessTexture.index] != null){
+            texture = gl3.textures[mat.metallicRoughnessTexture.index].texture;
+        }
         this.material.metallicRoughness = {
             index: mat.metallicRoughnessTexture.index,
-            texture: gl3.textures[mat.metallicRoughnessTexture.index].texture,
+            texture: texture,
             texCoordIndex: mat.metallicRoughnessTexture.texCoordIndex,
             metallicFactor: mat.metallicRoughnessTexture.metallicFactor,
             roughnessFactor: mat.metallicRoughnessTexture.roughnessFactor,
         };
+        texture = null;
         if(mat.normalTexture.image != null && gl3.textures[mat.normalTexture.index] == null){
             gl3.createTextureFromObject(mat.normalTexture.image, mat.normalTexture.index);
         }
+        if(gl3.textures[mat.normalTexture.index] != null){
+            texture = gl3.textures[mat.normalTexture.index].texture;
+        }
         this.material.normal = {
             index: mat.normalTexture.index,
-            texture: gl3.textures[mat.normalTexture.index].texture,
+            texture: texture,
             texCoordIndex: mat.normalTexture.texCoordIndex,
             scale: mat.normalTexture.scale,
         };
+        texture = null;
         if(mat.occlusionTexture.image != null && gl3.textures[mat.occlusionTexture.index] == null){
             gl3.createTextureFromObject(mat.occlusionTexture.image, mat.occlusionTexture.index);
         }
+        if(gl3.textures[mat.occlusionTexture.index] != null){
+            texture = gl3.textures[mat.occlusionTexture.index].texture;
+        }
         this.material.occlusion = {
             index: mat.occlusionTexture.index,
-            texture: gl3.textures[mat.occlusionTexture.index].texture,
+            texture: texture,
             texCoordIndex: mat.occlusionTexture.texCoordIndex,
             strength: mat.occlusionTexture.strength,
         };
+        texture = null;
         if(mat.emissiveTexture.image != null && gl3.textures[mat.emissiveTexture.index] == null){
             gl3.createTextureFromObject(mat.emissiveTexture.image, mat.emissiveTexture.index);
         }
+        if(gl3.textures[mat.emissiveTexture.index] != null){
+            texture = gl3.textures[mat.emissiveTexture.index].texture;
+        }
         this.material.emissive = {
             index: mat.emissiveTexture.index,
-            texture: gl3.textures[mat.emissiveTexture.index].texture,
+            texture: texture,
             texCoordIndex: mat.emissiveTexture.texCoordIndex,
             factor: mat.emissiveTexture.factor,
         };
@@ -134,16 +155,16 @@ class Node {
         this.isRoot              = root === true;
         this.modelMatrixIsUpdate = false;
         this.children            = [];
-        this.position            = [0.0, 0.0, 0.0];
-        this.rotation            = [0.0, 0.0, 0.0, 0.0];
-        this.scaling             = [1.0, 1.0, 1.0];
-        this.defaultMatrix       = node.matrix != null ? node.matrix : mat4.identity(mat4.create());
+        this.position            = node.translation != null ? node.translation : [0.0, 0.0, 0.0];
+        this.rotation            = node.rotation != null ? node.rotation : [0.0, 0.0, 0.0, 0.0];
+        this.scaling             = node.sclae != null ? node.scale : [1.0, 1.0, 1.0];
+        this.defaultMatrix       = node.matrix;
+        // this.defaultMatrix       = node.matrix != null ? node.matrix : mat4.identity(mat4.create());
         this.parentMatrix        = parentMatrix != null ? parentMatrix : mat4.identity(mat4.create());
         this.mMatrix             = mat4.identity(mat4.create());
         this.vMatrix             = mat4.identity(mat4.create());
         this.pMatrix             = mat4.identity(mat4.create());
         this.mvMatrix            = mat4.identity(mat4.create());
-        this.vpMatrix            = mat4.identity(mat4.create());
         this.mvpMatrix           = mat4.identity(mat4.create());
         this.inverseMatrix       = mat4.identity(mat4.create());
         this.normalMatrix        = mat4.identity(mat4.create());
@@ -154,7 +175,7 @@ class Node {
             });
         }
 
-        this.updateMatrix();
+        this.updateMatrix(null, null, true);
     }
     setPosition(v){
         if(
@@ -183,13 +204,24 @@ class Node {
             this.modelMatrixIsUpdate = true;
         }
     }
-    updateMatrix(vMatrix, pMatrix){
-        let m = mat4.identity(mat4.create());
+    updateMatrix(vMatrix, pMatrix, forceUpdate){
+        let force = forceUpdate === true;
+        if(this.modelMatrixIsUpdate === true || force === true){
+            let m = mat4.compose(this.position, this.rotation, this.scaling);
+            if(this.defaultMatrix == null){
+                this.mMatrix = mat4.copy(m);
+            }else{
+                this.mMatrix = mat4.multiply(m, this.defaultMatrix);
+            }
+            if(this.parentMatrix != null){
+                this.mMatrix = mat4.multiply(this.parentMatrix, this.mMatrix);
+            }
+            force = true;
+        }
+        this.modelMatrixIsUpdate = false;
+
         let v = vMatrix;
         let p = pMatrix;
-        if(this.parentMatrix != null){
-            mat4.multiply(m, this.parentMatrix, m);
-        }
         if(v == null){
             v = this.vMatrix;
         }else{
@@ -200,22 +232,15 @@ class Node {
         }else{
             this.pMatrix = p;
         }
-        mat4.multiply(p, v, this.vpMatrix);
-        mat4.translate(m, this.position, m);
-        mat4.rotate(m, this.rotation[3], [this.rotation[0], this.rotation[1], this.rotation[2]] , m);
-        mat4.scale(m, this.scaling, m);
-        mat4.multiply(m, this.defaultMatrix, this.mMatrix);
         mat4.multiply(v, this.mMatrix, this.mvMatrix);
-        mat4.multiply(this.vpMatrix, this.mMatrix, this.mvpMatrix);
+        mat4.multiply(p, this.mvMatrix, this.mvpMatrix);
         mat4.inverse(this.mMatrix, this.inverseMatrix);
         mat4.transpose(this.inverseMatrix, this.normalMatrix);
-
-        this.modelMatrixIsUpdate = false;
 
         this.children.forEach((w, index) => {
             // 子ノードの親行列を更新してから再計算させる
             w.parentMatrix = this.mMatrix;
-            w.updateMatrix(v, p);
+            w.updateMatrix(v, p, force);
         });
     }
 }
@@ -410,7 +435,7 @@ export default class WebGLFrame {
         let invMatrix    = mat4.identity(mat4.create());
 
         // framebuffer
-        framebuffer = gl3.createFramebuffer(canvasWidth, canvasHeight, 1);
+        // framebuffer = gl3.createFramebuffer(canvasWidth, canvasHeight, 1);
 
         // texture
         gl3.textures.map((v, i) => {
@@ -429,11 +454,12 @@ export default class WebGLFrame {
         // variables
         let beginTime = Date.now();
         let nowTime = 0;
-        let cameraPosition = [0.0, 0.0, 5.0];
+        let cameraPosition = [0.0, 0.0, 50000.0];
         let centerPoint    = [0.0, 0.0, 0.0];
         let upDirection    = [0.0, 1.0, 0.0];
         let lightPosition  = [2.0, 5.0, 9.0];
         let ambientColor   = [0.1, 0.1, 0.1];
+        let cameraFarClip  = 100000.0;
         let targetTexture  = 0;
 
         // audio
@@ -468,16 +494,15 @@ export default class WebGLFrame {
                 60,
                 canvasWidth / canvasHeight,
                 0.1,
-                10.0,
+                cameraFarClip,
                 vMatrix, pMatrix, vpMatrix
             );
 
             // gltf update
             gltfNode.forEach((v) => {
                 if(v.isRoot === true){
+                    v.setPosition([15000.0, -10000.0, 70000.0]);
                     v.updateMatrix(vMatrix, pMatrix);
-                    v.setPosition([0.0, -1.0, 0.0]);
-                    v.setRotate(nowTime, [0.0, 1.0, 0.0]);
                 }
             });
 
@@ -539,15 +564,15 @@ export default class WebGLFrame {
         }
 
         function clean(){
-            torusVBO.map((v) => {
-                gl3.deleteBuffer(v);
-            });
-            gl3.deleteBuffer(torusIBO);
-            planeVBO.map((v) => {
-                gl3.deleteBuffer(v);
-            });
-            gl3.deleteBuffer(planeIBO);
-            gl3.deleteFramebuffer(framebuffer);
+            // torusVBO.map((v) => {
+            //     gl3.deleteBuffer(v);
+            // });
+            // gl3.deleteBuffer(torusIBO);
+            // planeVBO.map((v) => {
+            //     gl3.deleteBuffer(v);
+            // });
+            // gl3.deleteBuffer(planeIBO);
+            // gl3.deleteFramebuffer(framebuffer);
             gl3.textures.map((v) => {
                 if(v == null || v.texture == null){return;}
                 gl3.deleteTexture(v.texture);
