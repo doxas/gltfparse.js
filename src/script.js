@@ -141,6 +141,7 @@ class Node {
         this.parentMatrix        = parentMatrix != null ? parentMatrix : mat4.identity(mat4.create());
         this.mMatrix             = mat4.identity(mat4.create());
         this.vMatrix             = mat4.identity(mat4.create());
+        this.pMatrix             = mat4.identity(mat4.create());
         this.mvMatrix            = mat4.identity(mat4.create());
         this.vpMatrix            = mat4.identity(mat4.create());
         this.mvpMatrix           = mat4.identity(mat4.create());
@@ -182,10 +183,10 @@ class Node {
             this.modelMatrixIsUpdate = true;
         }
     }
-    updateMatrix(vMatrix, vpMatrix){
+    updateMatrix(vMatrix, pMatrix){
         let m = mat4.identity(mat4.create());
         let v = vMatrix;
-        let vp = vpMatrix;
+        let p = pMatrix;
         if(this.parentMatrix != null){
             mat4.multiply(m, this.parentMatrix, m);
         }
@@ -194,17 +195,18 @@ class Node {
         }else{
             this.vMatrix = v;
         }
-        if(vp == null){
-            vp = this.vpMatrix;
+        if(p == null){
+            p = this.pMatrix;
         }else{
-            this.vpMatrix = vp;
+            this.pMatrix = p;
         }
+        mat4.multiply(p, v, this.vpMatrix);
         mat4.translate(m, this.position, m);
         mat4.rotate(m, this.rotation[3], [this.rotation[0], this.rotation[1], this.rotation[2]] , m);
         mat4.scale(m, this.scaling, m);
         mat4.multiply(m, this.defaultMatrix, this.mMatrix);
         mat4.multiply(v, this.mMatrix, this.mvMatrix);
-        mat4.multiply(vp, this.mMatrix, this.mvpMatrix);
+        mat4.multiply(this.vpMatrix, this.mMatrix, this.mvpMatrix);
         mat4.inverse(this.mMatrix, this.inverseMatrix);
         mat4.transpose(this.inverseMatrix, this.normalMatrix);
 
@@ -213,7 +215,7 @@ class Node {
         this.children.forEach((w, index) => {
             // 子ノードの親行列を更新してから再計算させる
             w.parentMatrix = this.mMatrix;
-            w.updateMatrix(v, vp);
+            w.updateMatrix(v, p);
         });
     }
 }
@@ -427,9 +429,9 @@ export default class WebGLFrame {
         // variables
         let beginTime = Date.now();
         let nowTime = 0;
-        let cameraPosition = [0.0, 5.0, 5.0];
+        let cameraPosition = [0.0, 0.0, 5.0];
         let centerPoint    = [0.0, 0.0, 0.0];
-        let upDirection    = [0.0, 0.707, -0.707];
+        let upDirection    = [0.0, 1.0, 0.0];
         let lightPosition  = [2.0, 5.0, 9.0];
         let ambientColor   = [0.1, 0.1, 0.1];
         let targetTexture  = 0;
@@ -473,7 +475,8 @@ export default class WebGLFrame {
             // gltf update
             gltfNode.forEach((v) => {
                 if(v.isRoot === true){
-                    v.updateMatrix(vMatrix, vpMatrix);
+                    v.updateMatrix(vMatrix, pMatrix);
+                    v.setPosition([0.0, -1.0, 0.0]);
                     v.setRotate(nowTime, [0.0, 1.0, 0.0]);
                 }
             });
@@ -502,10 +505,8 @@ export default class WebGLFrame {
                         w.material.baseColor.index,
                         w.material.metallicRoughness.index,
                         w.material.normal.index,
-                        // w.material.metallicRoughness.metallicFactor,
-                        // w.material.metallicRoughness.roughnessFactor,
-                        gMetallic,
-                        gRoughness,
+                        w.material.metallicRoughness.metallicFactor,
+                        w.material.metallicRoughness.roughnessFactor,
                         w.material.normal.scale,
                     ]);
                     if(w.indexCount > 0){

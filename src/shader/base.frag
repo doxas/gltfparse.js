@@ -103,7 +103,7 @@ vec3 SpecularBRDF(
     const in IncidentLight directLight,
     const in GeometricContext geometry,
     vec3 specularColor,
-    float roughnessFactor
+    float roughness
 ){
     vec3 N = geometry.normal;
     vec3 V = geometry.viewDir;
@@ -115,7 +115,7 @@ vec3 SpecularBRDF(
     float dotNH = saturate(dot(N, H));
     float dotVH = saturate(dot(V, H));
     float dotLV = saturate(dot(L, V));
-    float alpha = roughnessFactor * roughnessFactor;
+    float alpha = roughness * roughness;
 
     float D = D_GGX(alpha, dotNH);
     float G = G_Smith_Schlick_GGX(alpha, dotNV, dotNL);
