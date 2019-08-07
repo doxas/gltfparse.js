@@ -17,6 +17,10 @@ let basePrg, noisePrg;
 // geometry
 let gltfNode = [];
 
+// test
+let gRoughness = 0.5;
+let gMetallic  = 0.5;
+
 // const PATH_STRING = './resource/assassin_gai/scene.gltf';
 const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
 
@@ -136,6 +140,8 @@ class Node {
         this.defaultMatrix       = node.matrix != null ? node.matrix : mat4.identity(mat4.create());
         this.parentMatrix        = parentMatrix != null ? parentMatrix : mat4.identity(mat4.create());
         this.mMatrix             = mat4.identity(mat4.create());
+        this.vMatrix             = mat4.identity(mat4.create());
+        this.mvMatrix            = mat4.identity(mat4.create());
         this.vpMatrix            = mat4.identity(mat4.create());
         this.mvpMatrix           = mat4.identity(mat4.create());
         this.inverseMatrix       = mat4.identity(mat4.create());
@@ -176,11 +182,17 @@ class Node {
             this.modelMatrixIsUpdate = true;
         }
     }
-    updateMatrix(vpMatrix){
+    updateMatrix(vMatrix, vpMatrix){
         let m = mat4.identity(mat4.create());
+        let v = vMatrix;
         let vp = vpMatrix;
         if(this.parentMatrix != null){
             mat4.multiply(m, this.parentMatrix, m);
+        }
+        if(v == null){
+            v = this.vMatrix;
+        }else{
+            this.vMatrix = v;
         }
         if(vp == null){
             vp = this.vpMatrix;
@@ -191,16 +203,17 @@ class Node {
         mat4.rotate(m, this.rotation[3], [this.rotation[0], this.rotation[1], this.rotation[2]] , m);
         mat4.scale(m, this.scaling, m);
         mat4.multiply(m, this.defaultMatrix, this.mMatrix);
+        mat4.multiply(v, this.mMatrix, this.mvMatrix);
         mat4.multiply(vp, this.mMatrix, this.mvpMatrix);
         mat4.inverse(this.mMatrix, this.inverseMatrix);
         mat4.transpose(this.inverseMatrix, this.normalMatrix);
 
         this.modelMatrixIsUpdate = false;
 
-        this.children.forEach((v, index) => {
+        this.children.forEach((w, index) => {
             // 子ノードの親行列を更新してから再計算させる
-            v.parentMatrix = this.mMatrix;
-            v.updateMatrix(vp);
+            w.parentMatrix = this.mMatrix;
+            w.updateMatrix(v, vp);
         });
     }
 }
@@ -277,32 +290,12 @@ export default class WebGLFrame {
         let wrapper = new gl3.Gui.Wrapper();
         document.body.appendChild(wrapper.getElement());
 
-        let slider = new gl3.Gui.Slider('test', 50, 0, 100, 1);
-        slider.add('input', (evt, self) => {console.log(self.getValue());});
-        wrapper.append(slider.getElement());
-
-        let check = new gl3.Gui.Checkbox('hoge', false);
-        check.add('change', (evt, self) => {console.log(self.getValue());});
-        wrapper.append(check.getElement());
-
-        let radio0 = new gl3.Gui.Radio('hoge', null, false);
-        let radio1 = new gl3.Gui.Radio('fuga', null, false);
-        radio0.add('change', (evt, self) => {console.log(self.getValue());});
-        radio1.add('change', (evt, self) => {console.log(self.getValue());});
-        wrapper.append(radio0.getElement());
-        wrapper.append(radio1.getElement());
-
-        let select = new gl3.Gui.Select('fuga', ['foo', 'baa'], 0);
-        select.add('change', (evt, self) => {console.log(self.getValue());});
-        wrapper.append(select.getElement());
-
-        let spin = new gl3.Gui.Spin('hoge', 0.0, -1.0, 1.0, 0.1);
-        spin.add('input', (evt, self) => {console.log(self.getValue());});
-        wrapper.append(spin.getElement());
-
-        let color = new gl3.Gui.Color('fuga', '#ff0000');
-        color.add('change', (evt, self) => {console.log(self.getValue(), self.getFloatValue());});
-        wrapper.append(color.getElement());
+        let roughSlider = new gl3.Gui.Slider('roughness', gRoughness * 100, 0, 100, 1);
+        roughSlider.add('input', (evt, self) => {gRoughness = self.getValue() * 0.01;});
+        wrapper.append(roughSlider.getElement());
+        let metalSlider = new gl3.Gui.Slider('metallic', gMetallic * 100, 0, 100, 1);
+        metalSlider.add('input', (evt, self) => {gMetallic = self.getValue() * 0.01;});
+        wrapper.append(metalSlider.getElement());
     }
 
     shaderLoader(){
@@ -314,6 +307,7 @@ export default class WebGLFrame {
             [3, 3, 2],
             [
                 'mMatrix',
+                'mvMatrix',
                 'mvpMatrix',
                 'normalMatrix',
                 'baseColorFactor',
@@ -327,6 +321,7 @@ export default class WebGLFrame {
                 'normalScale',
             ],
             [
+                'matrix4fv',
                 'matrix4fv',
                 'matrix4fv',
                 'matrix4fv',
@@ -432,10 +427,10 @@ export default class WebGLFrame {
         // variables
         let beginTime = Date.now();
         let nowTime = 0;
-        let cameraPosition = [0.0, 0.0, 5.0];
+        let cameraPosition = [0.0, 5.0, 5.0];
         let centerPoint    = [0.0, 0.0, 0.0];
-        let upDirection    = [0.0, 1.0, 0.0];
-        let lightPosition  = [2.0, 2.0, 9.0];
+        let upDirection    = [0.0, 0.707, -0.707];
+        let lightPosition  = [2.0, 5.0, 9.0];
         let ambientColor   = [0.1, 0.1, 0.1];
         let targetTexture  = 0;
 
@@ -478,8 +473,8 @@ export default class WebGLFrame {
             // gltf update
             gltfNode.forEach((v) => {
                 if(v.isRoot === true){
-                    v.updateMatrix(vpMatrix);
-                    v.setRotate(nowTime, [1.0, 0.0, 0.0]);
+                    v.updateMatrix(vMatrix, vpMatrix);
+                    v.setRotate(nowTime, [0.0, 1.0, 0.0]);
                 }
             });
 
@@ -498,6 +493,7 @@ export default class WebGLFrame {
                 v.mesh.forEach((w) => {
                     basePrg.pushShader([
                         v.mMatrix,
+                        v.mvMatrix,
                         v.mvpMatrix,
                         v.normalMatrix,
                         w.material.baseColor.factor,
@@ -506,8 +502,10 @@ export default class WebGLFrame {
                         w.material.baseColor.index,
                         w.material.metallicRoughness.index,
                         w.material.normal.index,
-                        w.material.metallicRoughness.metallicFactor,
-                        w.material.metallicRoughness.roughnessFactor,
+                        // w.material.metallicRoughness.metallicFactor,
+                        // w.material.metallicRoughness.roughnessFactor,
+                        gMetallic,
+                        gRoughness,
                         w.material.normal.scale,
                     ]);
                     if(w.indexCount > 0){
