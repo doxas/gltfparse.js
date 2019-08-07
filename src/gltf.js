@@ -68,11 +68,11 @@ class GLTFNode {
                     // テクスチャ座標は texCoord0 と texCoord1 を取り得るので既定値を 0 にする
                     // その他の係数は存在確認を行って適宜キャッシュする
                     let baseColorImage                 = null;
-                    let baseColorImageIndex            = -1;
+                    let baseColorImageIndex            = 0;
                     let baseColorTexCoordIndex         = 0;
                     let baseColorFactor                = null;
                     let metallicRoughnessImage         = null;
-                    let metallicRoughnessImageIndex    = -1;
+                    let metallicRoughnessImageIndex    = 0;
                     let metallicRoughnessTexCoordIndex = 0;
                     let metallicFactor                 = null;
                     let roughnessFactor                = null;
@@ -102,15 +102,15 @@ class GLTFNode {
                         }
                     }
                     let normalImage            = null;
-                    let normalImageIndex       = -1;
+                    let normalImageIndex       = 0;
                     let normalTexCoordIndex    = 0;
                     let normalScale            = null;
                     let occlusionImage         = null;
-                    let occlusionImageIndex    = -1;
+                    let occlusionImageIndex    = 0;
                     let occlusionTexCoordIndex = 0;
                     let occlusionStrength      = null;
                     let emissiveImage          = null;
-                    let emissiveImageIndex     = -1;
+                    let emissiveImageIndex     = 0;
                     let emissiveTexCoordIndex  = 0;
                     let emissiveFactor         = null;
                     if(material.hasOwnProperty('normalTexture') === true){

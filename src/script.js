@@ -455,16 +455,23 @@ export default class WebGLFrame {
         // variables
         let beginTime = Date.now();
         let nowTime = 0;
-        let cameraPosition = [0.0, 0.0, 50000.0];
+        let cameraPosition = [0.0, 0.0, 5.0];
         let centerPoint    = [0.0, 0.0, 0.0];
         let upDirection    = [0.0, 1.0, 0.0];
         let lightPosition  = [2.0, 5.0, 9.0];
         let ambientColor   = [0.1, 0.1, 0.1];
-        let cameraFarClip  = 100000.0;
+        let cameraFarClip  = 10.0;
         let targetTexture  = 0;
 
         // audio
         // audio.src[0].play();
+
+        gltfNode.forEach((v) => {
+            if(v.isRoot === true){
+                v.setScale([0.0001, 0.0001, 0.0001]);
+                v.updateMatrix(vMatrix, pMatrix);
+            }
+        });
 
         // rendering
         render();
