@@ -1,6 +1,9 @@
 
 const CONSOLE_OUTPUT_COLOR = 'seagreen';
 
+/**
+ * glTF に含まれるノードの情報
+ */
 class GLTFNode {
     /**
      * glTF の頂点属性名テーブル
@@ -39,18 +42,21 @@ class GLTFNode {
      * @param {object} data - データ構造の出力先（最終的に GLTFParse.data になるオブジェクト）
      */
     constructor(current, data){
+        // matrix 属性か translation, rotation, scale のいずれかを含む
+        // mesh を含まない場合、レンダリングするジオメトリは存在しない
         this.name        = current.name   != null ? current.name   : null;
         this.mesh        = current.mesh   != null ? current.mesh   : null;
         this.matrix      = current.matrix != null ? current.matrix : null;
         this.translation = current.translation != null ? current.translation : null;
-        this.rotation    = current.rotation    != null ? current.rotation : null;
-        this.scale       = current.scale       != null ? current.scale : null;
+        this.rotation    = current.rotation    != null ? current.rotation    : null;
+        this.scale       = current.scale       != null ? current.scale       : null;
         this.children = [];
 
-        // mesh exists
+        // mesh が存在する
         if(this.mesh != null){
             let mesh = data.gltf.meshes[this.mesh];
             this.mesh = [];
+            // ひとつの mesh には複数のプリミティブが含まれる可能性がある
             mesh.primitives.forEach((v, index) => {
                 this.mesh[index] = {
                     primitiveType: GLTFNode.PRIMITIVE_TYPE[v.mode],
@@ -66,6 +72,8 @@ class GLTFNode {
                 if(v.hasOwnProperty('material') === true){
                     let material = data.gltf.materials[v.material];
                     // テクスチャ座標は texCoord0 と texCoord1 を取り得るので既定値を 0 にする
+                    // テクスチャ自体を含まない場合もあり得るが既定値としてユニットは 0 を指定
+                    // ただしここでは画像をオブジェクトのメンバにしているだけでテクスチャは生成されていない
                     // その他の係数は存在確認を行って適宜キャッシュする
                     let baseColorImage                 = null;
                     let baseColorImageIndex            = 0;
@@ -708,26 +716,4 @@ window.GLTFParse = GLTFParse;
  */
 function typeOf(any){
     return Object.prototype.toString.call(any);
-}
-/**
- * object 及び Array から key を抜き出し返す
- * @param {object|Array} any - 対象となるオブジェクト及び配列
- * @return {Array} key の配列（引数に配列が渡された場合は添字のインデックス配列）
- */
-function getKeys(any){
-    let arr = [];
-    switch(typeOf(any)){
-        case '[object Array]':
-            if(any.length > 0){
-                arr = any.map((v, i) => {return i;});
-            }
-            break;
-        case '[object Object]':
-            arr = Object.keys(any);
-            break;
-        default:
-            arr = null;
-            break
-    }
-    return arr;
 }
