@@ -76,10 +76,12 @@ class GLTFNode {
                     // ただしここでは画像をオブジェクトのメンバにしているだけでテクスチャは生成されていない
                     // その他の係数は存在確認を行って適宜キャッシュする
                     let baseColorImage                 = null;
+                    let baseColorSampler               = null;
                     let baseColorImageIndex            = 0;
                     let baseColorTexCoordIndex         = 0;
                     let baseColorFactor                = [1.0, 1.0, 1.0, 1.0];
                     let metallicRoughnessImage         = null;
+                    let metallicRoughnessSampler       = null;
                     let metallicRoughnessImageIndex    = 0;
                     let metallicRoughnessTexCoordIndex = 0;
                     let metallicFactor                 = 0.5;
@@ -88,6 +90,7 @@ class GLTFNode {
                         if(material.pbrMetallicRoughness.hasOwnProperty('baseColorTexture') === true){
                             baseColorImageIndex = material.pbrMetallicRoughness.baseColorTexture.index;
                             baseColorImage = data.images[baseColorImageIndex];
+                            baseColorSampler = data.gltf.samplers[data.gltf.textures[baseColorImageIndex].sampler];
                             if(material.pbrMetallicRoughness.baseColorTexture.hasOwnProperty('texCoord') === true){
                                 baseColorTexCoordIndex = material.pbrMetallicRoughness.baseColorTexture.texCoord;
                             }
@@ -98,6 +101,7 @@ class GLTFNode {
                         if(material.pbrMetallicRoughness.hasOwnProperty('metallicRoughnessTexture') === true){
                             metallicRoughnessImageIndex = material.pbrMetallicRoughness.metallicRoughnessTexture.index;
                             metallicRoughnessImage = data.images[metallicRoughnessImageIndex];
+                            metallicRoughnessSampler = data.gltf.samplers[data.gltf.textures[metallicRoughnessImageIndex].sampler];
                             if(material.pbrMetallicRoughness.metallicRoughnessTexture.hasOwnProperty('texCoord') === true){
                                 metallicRoughnessTexCoordIndex = material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
                             }
@@ -110,20 +114,24 @@ class GLTFNode {
                         }
                     }
                     let normalImage            = null;
+                    let normalSampler          = null;
                     let normalImageIndex       = 0;
                     let normalTexCoordIndex    = 0;
                     let normalScale            = 1.0;
                     let occlusionImage         = null;
+                    let occlusionSampler       = null;
                     let occlusionImageIndex    = 0;
                     let occlusionTexCoordIndex = 0;
                     let occlusionStrength      = 1.0;
                     let emissiveImage          = null;
+                    let emissiveSampler        = null;
                     let emissiveImageIndex     = 0;
                     let emissiveTexCoordIndex  = 0;
                     let emissiveFactor         = [0.0, 0.0, 0.0];
                     if(material.hasOwnProperty('normalTexture') === true){
                         normalImageIndex = material.normalTexture.index;
                         normalImage = data.images[normalImageIndex];
+                        normalSampler = data.gltf.samplers[data.gltf.textures[normalImageIndex].sampler];
                         if(material.normalTexture.hasOwnProperty('scale') === true){
                             normalScale = material.normalTexture.scale;
                         }
@@ -134,6 +142,7 @@ class GLTFNode {
                     if(material.hasOwnProperty('occlusionTexture') === true){
                         occlusionImageIndex = material.occlusionTexture.index;
                         occlusionImage = data.images[occlusionImageIndex];
+                        occlusionSampler = data.gltf.samplers[data.gltf.textures[occlusionImageIndex].sampler];
                         if(material.occlusionTexture.hasOwnProperty('strength') === true){
                             occlusionStrength = material.occlusionTexture.strength;
                         }
@@ -144,6 +153,7 @@ class GLTFNode {
                     if(material.hasOwnProperty('emissiveTexture') === true){
                         emissiveImageIndex = material.emissiveTexture.index;
                         emissiveImage = data.images[emissiveImageIndex];
+                        emissiveSampler = data.gltf.samplers[data.gltf.textures[emissiveImageIndex].sampler];
                         if(material.emissiveTexture.hasOwnProperty('texCoord') === true){
                             emissiveTexCoordIndex = material.emissiveTexture.texCoord;
                         }
@@ -154,12 +164,14 @@ class GLTFNode {
                     this.mesh[index].material = {
                         baseColorTexture: {
                             image: baseColorImage,
+                            sampler: baseColorSampler,
                             index: baseColorImageIndex,
                             texCoordIndex: baseColorTexCoordIndex,
                             factor: baseColorFactor,
                         },
                         metallicRoughnessTexture: {
                             image: metallicRoughnessImage,
+                            sampler: metallicRoughnessSampler,
                             index: metallicRoughnessImageIndex,
                             texCoordIndex: metallicRoughnessTexCoordIndex,
                             metallicFactor: metallicFactor,
@@ -167,18 +179,21 @@ class GLTFNode {
                         },
                         normalTexture: {
                             image: normalImage,
+                            sampler: normalSampler,
                             index: normalImageIndex,
                             texCoordIndex: normalTexCoordIndex,
                             scale: normalScale,
                         },
                         occlusionTexture: {
                             image: occlusionImage,
+                            sampler: occlusionSampler,
                             index: occlusionImageIndex,
                             texCoordIndex: occlusionTexCoordIndex,
                             strength: occlusionStrength,
                         },
                         emissiveTexture: {
                             image: emissiveImage,
+                            sampler: emissiveSampler,
                             index: emissiveImageIndex,
                             texCoordIndex: emissiveTexCoordIndex,
                             factor: emissiveFactor,
