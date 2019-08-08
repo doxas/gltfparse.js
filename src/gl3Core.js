@@ -4,6 +4,7 @@ import math  from './gl3Math.js';
 import mesh  from './gl3Mesh.js';
 import util  from './gl3Util.js';
 import gui   from './gl3Gui.js';
+import gltf  from './gl3GLTF.js';
 
 /**
  * glcubic
@@ -112,6 +113,11 @@ export default class gl3 {
          * @type {gl3Math}
          */
         this.Math = new math();
+        /**
+         * gl3GLTF クラスのインスタンス
+         * @type {gl3GLTF}
+         */
+        this.GLTF = gltf;
     }
 
     /**

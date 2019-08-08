@@ -15,7 +15,7 @@ let audio;
 let basePrg, noisePrg;
 
 // geometry
-let gltfNode = [];
+let gltfNode;
 
 // test
 let gRoughness = 0.5;
@@ -24,256 +24,6 @@ let gMetallic  = 0.5;
 // const PATH_STRING = './resource/assassin_gai/scene.gltf';
 // const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
 const PATH_STRING = './resource/E6.glb';
-
-class Mesh {
-    constructor(mesh){
-        this.textureIsUpdate = false;
-        this.primitive       = gl.POINTS;
-        this.positionVBO     = null;
-        this.normalVBO       = null;
-        this.colorVBO        = null;
-        this.texCoord0VBO    = null;
-        this.texCoord1VBO    = null;
-        this.VBO             = [];
-        this.IBO             = null;
-        this.vertexCount     = 0;
-        this.indexCount      = 0;
-        this.indexIsInt      = false;
-        this.material        = {};
-        // primitive type
-        if(mesh.hasOwnProperty('primitiveType') === true){
-            this.primitive = gl[mesh.primitiveType];
-        }
-        // attribute
-        if(mesh.hasOwnProperty('position') === true){
-            this.positionVBO = gl3.createVbo(mesh.position.data);
-            this.VBO.push(this.positionVBO);
-            this.vertexCount = mesh.position.count;
-        }
-        if(mesh.hasOwnProperty('normal') === true){
-            this.normalVBO = gl3.createVbo(mesh.normal.data);
-            this.VBO.push(this.normalVBO);
-            if(this.vertexCount === 0){this.vertexCount = mesh.normal.count;}
-        }
-        if(mesh.hasOwnProperty('color') === true){
-            this.colorVBO = gl3.createVbo(mesh.color.data);
-            this.VBO.push(this.colorVBO);
-            if(this.vertexCount === 0){this.vertexCount = mesh.color.count;}
-        }
-        if(mesh.hasOwnProperty('texCoord0') === true){
-            this.texCoord0VBO = gl3.createVbo(mesh.texCoord0.data);
-            if(this.vertexCount === 0){this.vertexCount = mesh.texCoord0.count;}
-        }
-        if(mesh.hasOwnProperty('texCoord1') === true){
-            this.texCoord1VBO = gl3.createVbo(mesh.texCoord1.data);
-            if(this.vertexCount === 0){this.vertexCount = mesh.texCoord1.count;}
-        }
-        if(this.texCoord0VBO != null && this.texCoord1VBO != null){
-            this.VBO.push(this.texCoord0VBO, this.texCoord1VBO);
-        }else if(this.texCoord0VBO != null && this.texCoord1VBO == null){
-            this.VBO.push(this.texCoord0VBO, this.texCoord0VBO);
-        }else if(this.texCoord0VBO == null && this.texCoord1VBO != null){
-            this.VBO.push(this.texCoord1VBO, this.texCoord1VBO);
-        }
-        // indices
-        if(mesh.hasOwnProperty('indices') === true){
-            this.indexIsInt = mesh.indices.data instanceof Uint32Array;
-            if(this.indexIsInt === true){
-                this.IBO = gl3.createIboInt(mesh.indices.data)
-            }else{
-                this.IBO = gl3.createIbo(mesh.indices.data);
-            }
-        }
-        // material
-        let mat = mesh.material;
-        let texture = null;
-        if(mat.baseColorTexture.image != null && gl3.textures[mat.baseColorTexture.index] == null){
-            gl3.createTextureFromObject(mat.baseColorTexture.image, mat.baseColorTexture.index);
-        }
-        if(mat.baseColorTexture.image != null && gl3.textures[mat.baseColorTexture.index] != null){
-            texture = gl3.textures[mat.baseColorTexture.index].texture;
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.baseColorTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.baseColorTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.baseColorTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.baseColorTexture.sampler.wrapT);
-        }
-        this.material.baseColor = {
-            index: mat.baseColorTexture.index,
-            texture: texture,
-            texCoordIndex: mat.baseColorTexture.texCoordIndex,
-            factor: mat.baseColorTexture.factor,
-        };
-        texture = null;
-        if(mat.metallicRoughnessTexture.image != null && gl3.textures[mat.metallicRoughnessTexture.index] == null){
-            gl3.createTextureFromObject(mat.metallicRoughnessTexture.image, mat.metallicRoughnessTexture.index);
-        }
-        if(mat.metallicRoughnessTexture.image != null && gl3.textures[mat.metallicRoughnessTexture.index] != null){
-            texture = gl3.textures[mat.metallicRoughnessTexture.index].texture;
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.metallicRoughnessTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.metallicRoughnessTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.metallicRoughnessTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.metallicRoughnessTexture.sampler.wrapT);
-        }
-        this.material.metallicRoughness = {
-            index: mat.metallicRoughnessTexture.index,
-            texture: texture,
-            texCoordIndex: mat.metallicRoughnessTexture.texCoordIndex,
-            metallicFactor: mat.metallicRoughnessTexture.metallicFactor,
-            roughnessFactor: mat.metallicRoughnessTexture.roughnessFactor,
-        };
-        texture = null;
-        if(mat.normalTexture.image != null && gl3.textures[mat.normalTexture.index] == null){
-            gl3.createTextureFromObject(mat.normalTexture.image, mat.normalTexture.index);
-        }
-        if(mat.normalTexture.image != null && gl3.textures[mat.normalTexture.index] != null){
-            texture = gl3.textures[mat.normalTexture.index].texture;
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.normalTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.normalTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.normalTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.normalTexture.sampler.wrapT);
-        }
-        this.material.normal = {
-            index: mat.normalTexture.index,
-            texture: texture,
-            texCoordIndex: mat.normalTexture.texCoordIndex,
-            scale: mat.normalTexture.scale,
-        };
-        texture = null;
-        if(mat.occlusionTexture.image != null && gl3.textures[mat.occlusionTexture.index] == null){
-            gl3.createTextureFromObject(mat.occlusionTexture.image, mat.occlusionTexture.index);
-        }
-        if(mat.occlusionTexture.image != null && gl3.textures[mat.occlusionTexture.index] != null){
-            texture = gl3.textures[mat.occlusionTexture.index].texture;
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.occlusionTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.occlusionTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.occlusionTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.occlusionTexture.sampler.wrapT);
-        }
-        this.material.occlusion = {
-            index: mat.occlusionTexture.index,
-            texture: texture,
-            texCoordIndex: mat.occlusionTexture.texCoordIndex,
-            strength: mat.occlusionTexture.strength,
-        };
-        texture = null;
-        if(mat.emissiveTexture.image != null && gl3.textures[mat.emissiveTexture.index] == null){
-            gl3.createTextureFromObject(mat.emissiveTexture.image, mat.emissiveTexture.index);
-        }
-        if(mat.emissiveTexture.image != null && gl3.textures[mat.emissiveTexture.index] != null){
-            texture = gl3.textures[mat.emissiveTexture.index].texture;
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.emissiveTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.emissiveTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.emissiveTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.emissiveTexture.sampler.wrapT);
-        }
-        this.material.emissive = {
-            index: mat.emissiveTexture.index,
-            texture: texture,
-            texCoordIndex: mat.emissiveTexture.texCoordIndex,
-            factor: mat.emissiveTexture.factor,
-        };
-    }
-}
-
-class Node {
-    constructor(node, parentMatrix, root){
-        this.name                = node.name;
-        this.isRoot              = root === true;
-        this.modelMatrixIsUpdate = false;
-        this.children            = [];
-        this.position            = node.translation != null ? node.translation : [0.0, 0.0, 0.0];
-        this.rotation            = node.rotation != null ? node.rotation : [0.0, 0.0, 0.0, 0.0];
-        this.scaling             = node.sclae != null ? node.scale : [1.0, 1.0, 1.0];
-        this.parentMatrix        = parentMatrix != null ? parentMatrix : mat4.identity(mat4.create());
-        this.defaultMatrix       = node.matrix;
-        this.mMatrix             = mat4.identity(mat4.create());
-        this.vMatrix             = mat4.identity(mat4.create());
-        this.pMatrix             = mat4.identity(mat4.create());
-        this.mvMatrix            = mat4.identity(mat4.create());
-        this.mvpMatrix           = mat4.identity(mat4.create());
-        this.inverseMatrix       = mat4.identity(mat4.create());
-        this.normalMatrix        = mat4.identity(mat4.create());
-
-        if(node.mesh != null && Array.isArray(node.mesh) === true){
-            this.mesh = node.mesh.map((v) => {
-                return new Mesh(v);
-            });
-        }
-
-        this.updateMatrix(null, null, true);
-    }
-    setPosition(v){
-        if(
-            (Array.isArray(v) === true && v.length === 3) ||
-            (v instanceof Float32Array === true && v.length === 3)
-        ){
-            this.position = v;
-            this.modelMatrixIsUpdate = true;
-        }
-    }
-    setRotate(angle, v){
-        if(
-            (angle != null && Array.isArray(v) === true && v.length === 3) ||
-            (angle != null && v instanceof Float32Array === true && v.length === 3)
-        ){
-            this.rotation = qtn.rotate(angle, vec3.normalize(v));
-            this.modelMatrixIsUpdate = true;
-        }
-    }
-    setScale(v){
-        if(
-            (Array.isArray(v) === true && v.length === 3) ||
-            (v instanceof Float32Array === true && v.length === 3)
-        ){
-            this.scaling = v;
-            this.modelMatrixIsUpdate = true;
-        }
-    }
-    updateMatrix(vMatrix, pMatrix, forceUpdate){
-        let force = forceUpdate === true;
-        if(this.modelMatrixIsUpdate === true || force === true){
-            let m = mat4.compose(this.position, this.rotation, this.scaling);
-            if(this.defaultMatrix == null){
-                this.mMatrix = mat4.copy(m);
-            }else{
-                this.mMatrix = mat4.multiply(m, this.defaultMatrix);
-            }
-            if(this.parentMatrix != null){
-                this.mMatrix = mat4.multiply(this.parentMatrix, this.mMatrix);
-            }
-            force = true;
-        }
-        this.modelMatrixIsUpdate = false;
-
-        let v = vMatrix;
-        let p = pMatrix;
-        if(v == null){
-            v = this.vMatrix;
-        }else{
-            this.vMatrix = v;
-        }
-        if(p == null){
-            p = this.pMatrix;
-        }else{
-            this.pMatrix = p;
-        }
-        mat4.multiply(v, this.mMatrix, this.mvMatrix);
-        mat4.multiply(p, this.mvMatrix, this.mvpMatrix);
-        mat4.inverse(this.mMatrix, this.inverseMatrix);
-        mat4.transpose(this.inverseMatrix, this.normalMatrix);
-
-        this.children.forEach((w, index) => {
-            // 子ノードの親行列を更新してから再計算させる
-            w.parentMatrix = this.mMatrix;
-            w.updateMatrix(v, p, force);
-        });
-    }
-}
 
 export default class WebGLFrame {
     static get VERSION(){return 'v0.0.1';}
@@ -311,8 +61,8 @@ export default class WebGLFrame {
             // gl3.createTextureFromFile('./resource/snoise.png', 0, () => {
                 this.shaderLoader();
                 this.gltfLoader()
-                .then((data) => {
-                    this.init(data);
+                .then(() => {
+                    this.init();
                 })
                 .catch((err) => {
                     console.error(err);
@@ -432,10 +182,11 @@ export default class WebGLFrame {
 
     gltfLoader(){
         return new Promise((resolve, reject) => {
-            new GLTFParse().load(PATH_STRING)
-            .then((data) => {
-                console.log('🍭', data);
-                resolve(data);
+            new gl3.GLTF(gl3).load(PATH_STRING)
+            .then((gltfData) => {
+                gltfNode = gltfData.node;
+                console.log('🍆', gltfData);
+                resolve();
             })
             .catch((err) => {
                 reject(err);
@@ -443,28 +194,7 @@ export default class WebGLFrame {
         });
     }
 
-    generateNodeFromGltf(data, parentMatrix, root){
-        let node = new Node(data, parentMatrix, root);
-        let index = gltfNode.length;
-        gltfNode.push(node);
-        if(Array.isArray(data.children) === true){
-            data.children.forEach((v) => {
-                let child = this.generateNodeFromGltf(v, gltfNode[index].mMatrix);
-                gltfNode[index].children.push(child);
-            });
-        }
-        return node;
-    }
-
-    init(gltfData){
-
-        // gltf
-        gltfData.scenes.forEach((v) => {
-            // シーンレベルで forEach するので、これがルートノードになる（第三引数）
-            this.generateNodeFromGltf(v, null, true);
-        });
-        console.log('🍰', gltfNode);
-
+    init(){
         // plane
         let planePosition = [
             -1.0,  1.0,  0.0,
