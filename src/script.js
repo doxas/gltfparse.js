@@ -23,7 +23,8 @@ let gMetallic  = 0.5;
 
 // const PATH_STRING = './resource/assassin_gai/scene.gltf';
 // const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
-const PATH_STRING = './resource/E6.glb';
+// const PATH_STRING = './resource/E6.glb';
+const PATH_STRING = './resource/E6/E6_patch.gltf';
 
 export default class WebGLFrame {
     static get VERSION(){return 'v0.0.1';}
