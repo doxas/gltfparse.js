@@ -90,8 +90,13 @@ class Mesh {
         if(mat.baseColorTexture.image != null && gl3.textures[mat.baseColorTexture.index] == null){
             gl3.createTextureFromObject(mat.baseColorTexture.image, mat.baseColorTexture.index);
         }
-        if(gl3.textures[mat.baseColorTexture.index] != null){
+        if(mat.baseColorTexture.image != null && gl3.textures[mat.baseColorTexture.index] != null){
             texture = gl3.textures[mat.baseColorTexture.index].texture;
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.baseColorTexture.sampler.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.baseColorTexture.sampler.magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.baseColorTexture.sampler.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.baseColorTexture.sampler.wrapT);
         }
         this.material.baseColor = {
             index: mat.baseColorTexture.index,
@@ -103,8 +108,13 @@ class Mesh {
         if(mat.metallicRoughnessTexture.image != null && gl3.textures[mat.metallicRoughnessTexture.index] == null){
             gl3.createTextureFromObject(mat.metallicRoughnessTexture.image, mat.metallicRoughnessTexture.index);
         }
-        if(gl3.textures[mat.metallicRoughnessTexture.index] != null){
+        if(mat.metallicRoughnessTexture.image != null && gl3.textures[mat.metallicRoughnessTexture.index] != null){
             texture = gl3.textures[mat.metallicRoughnessTexture.index].texture;
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.metallicRoughnessTexture.sampler.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.metallicRoughnessTexture.sampler.magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.metallicRoughnessTexture.sampler.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.metallicRoughnessTexture.sampler.wrapT);
         }
         this.material.metallicRoughness = {
             index: mat.metallicRoughnessTexture.index,
@@ -117,8 +127,13 @@ class Mesh {
         if(mat.normalTexture.image != null && gl3.textures[mat.normalTexture.index] == null){
             gl3.createTextureFromObject(mat.normalTexture.image, mat.normalTexture.index);
         }
-        if(gl3.textures[mat.normalTexture.index] != null){
+        if(mat.normalTexture.image != null && gl3.textures[mat.normalTexture.index] != null){
             texture = gl3.textures[mat.normalTexture.index].texture;
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.normalTexture.sampler.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.normalTexture.sampler.magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.normalTexture.sampler.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.normalTexture.sampler.wrapT);
         }
         this.material.normal = {
             index: mat.normalTexture.index,
@@ -130,8 +145,13 @@ class Mesh {
         if(mat.occlusionTexture.image != null && gl3.textures[mat.occlusionTexture.index] == null){
             gl3.createTextureFromObject(mat.occlusionTexture.image, mat.occlusionTexture.index);
         }
-        if(gl3.textures[mat.occlusionTexture.index] != null){
+        if(mat.occlusionTexture.image != null && gl3.textures[mat.occlusionTexture.index] != null){
             texture = gl3.textures[mat.occlusionTexture.index].texture;
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.occlusionTexture.sampler.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.occlusionTexture.sampler.magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.occlusionTexture.sampler.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.occlusionTexture.sampler.wrapT);
         }
         this.material.occlusion = {
             index: mat.occlusionTexture.index,
@@ -143,8 +163,13 @@ class Mesh {
         if(mat.emissiveTexture.image != null && gl3.textures[mat.emissiveTexture.index] == null){
             gl3.createTextureFromObject(mat.emissiveTexture.image, mat.emissiveTexture.index);
         }
-        if(gl3.textures[mat.emissiveTexture.index] != null){
+        if(mat.emissiveTexture.image != null && gl3.textures[mat.emissiveTexture.index] != null){
             texture = gl3.textures[mat.emissiveTexture.index].texture;
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.emissiveTexture.sampler.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.emissiveTexture.sampler.magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.emissiveTexture.sampler.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.emissiveTexture.sampler.wrapT);
         }
         this.material.emissive = {
             index: mat.emissiveTexture.index,
@@ -157,15 +182,15 @@ class Mesh {
 
 class Node {
     constructor(node, parentMatrix, root){
+        this.name                = node.name;
         this.isRoot              = root === true;
         this.modelMatrixIsUpdate = false;
         this.children            = [];
         this.position            = node.translation != null ? node.translation : [0.0, 0.0, 0.0];
         this.rotation            = node.rotation != null ? node.rotation : [0.0, 0.0, 0.0, 0.0];
         this.scaling             = node.sclae != null ? node.scale : [1.0, 1.0, 1.0];
-        this.defaultMatrix       = node.matrix;
-        // this.defaultMatrix       = node.matrix != null ? node.matrix : mat4.identity(mat4.create());
         this.parentMatrix        = parentMatrix != null ? parentMatrix : mat4.identity(mat4.create());
+        this.defaultMatrix       = node.matrix;
         this.mMatrix             = mat4.identity(mat4.create());
         this.vMatrix             = mat4.identity(mat4.create());
         this.pMatrix             = mat4.identity(mat4.create());
@@ -498,6 +523,7 @@ export default class WebGLFrame {
 
         gltfNode.forEach((v) => {
             if(v.isRoot === true){
+                v.setPosition([1.7, -1.2, 7.1]);
                 v.setScale([0.0001, 0.0001, 0.0001]);
                 v.updateMatrix(vMatrix, pMatrix);
             }
@@ -539,7 +565,7 @@ export default class WebGLFrame {
             // gltf update
             gltfNode.forEach((v) => {
                 if(v.isRoot === true){
-                    v.setRotate(nowTime * 0.1, [0, 1, 0]);
+                    // v.setRotate(nowTime * 0.1, [0, 1, 0]);
                     // v.setPosition([15000.0, -10000.0, 70000.0]);
                     v.updateMatrix(vMatrix, pMatrix);
                 }
@@ -557,6 +583,8 @@ export default class WebGLFrame {
             // meshes
             gltfNode.forEach((v) => {
                 if(Array.isArray(v.mesh) !== true){return;}
+                // if(v.name.match(/sash_glass/)){
+                // }
                 v.mesh.forEach((w) => {
                     basePrg.pushShader([
                         v.mvMatrix,
