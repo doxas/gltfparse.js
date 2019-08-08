@@ -16,7 +16,6 @@ module.exports = (env, argv) => {
         context: path.resolve(__dirname, 'src'),
         entry: {
             script: './script.js',
-            gltfparse: './gltf.js'
         },
         output: {
             path: path.resolve(__dirname, 'public/js'),
