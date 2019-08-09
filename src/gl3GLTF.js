@@ -70,11 +70,15 @@ class Mesh {
         }
         if(mat.baseColorTexture.image != null && gl3.textures[mat.baseColorTexture.index] != null){
             texture = gl3.textures[mat.baseColorTexture.index].texture;
+            let minFilter = mat.baseColorTexture.sampler.minFilter || gl.LINEAR;
+            let magFilter = mat.baseColorTexture.sampler.magFilter || gl.LINEAR;
+            let wrapS = mat.baseColorTexture.sampler.wrapS || gl.REPEAT;
+            let wrapT = mat.baseColorTexture.sampler.wrapT || gl.REPEAT;
             gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.baseColorTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.baseColorTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.baseColorTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.baseColorTexture.sampler.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
         }
         this.material.baseColor = {
             index: mat.baseColorTexture.index,
@@ -88,11 +92,15 @@ class Mesh {
         }
         if(mat.metallicRoughnessTexture.image != null && gl3.textures[mat.metallicRoughnessTexture.index] != null){
             texture = gl3.textures[mat.metallicRoughnessTexture.index].texture;
+            let minFilter = mat.metallicRoughnessTexture.sampler.minFilter || gl.LINEAR;
+            let magFilter = mat.metallicRoughnessTexture.sampler.magFilter || gl.LINEAR;
+            let wrapS = mat.metallicRoughnessTexture.sampler.wrapS || gl.REPEAT;
+            let wrapT = mat.metallicRoughnessTexture.sampler.wrapT || gl.REPEAT;
             gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.metallicRoughnessTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.metallicRoughnessTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.metallicRoughnessTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.metallicRoughnessTexture.sampler.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
         }
         this.material.metallicRoughness = {
             index: mat.metallicRoughnessTexture.index,
@@ -107,11 +115,15 @@ class Mesh {
         }
         if(mat.normalTexture.image != null && gl3.textures[mat.normalTexture.index] != null){
             texture = gl3.textures[mat.normalTexture.index].texture;
+            let minFilter = mat.normalTexture.sampler.minFilter || gl.LINEAR;
+            let magFilter = mat.normalTexture.sampler.magFilter || gl.LINEAR;
+            let wrapS = mat.normalTexture.sampler.wrapS || gl.REPEAT;
+            let wrapT = mat.normalTexture.sampler.wrapT || gl.REPEAT;
             gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.normalTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.normalTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.normalTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.normalTexture.sampler.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
         }
         this.material.normal = {
             index: mat.normalTexture.index,
@@ -125,11 +137,15 @@ class Mesh {
         }
         if(mat.occlusionTexture.image != null && gl3.textures[mat.occlusionTexture.index] != null){
             texture = gl3.textures[mat.occlusionTexture.index].texture;
+            let minFilter = mat.occlusionTexture.sampler.minFilter || gl.LINEAR;
+            let magFilter = mat.occlusionTexture.sampler.magFilter || gl.LINEAR;
+            let wrapS = mat.occlusionTexture.sampler.wrapS || gl.REPEAT;
+            let wrapT = mat.occlusionTexture.sampler.wrapT || gl.REPEAT;
             gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.occlusionTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.occlusionTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.occlusionTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.occlusionTexture.sampler.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
         }
         this.material.occlusion = {
             index: mat.occlusionTexture.index,
@@ -143,11 +159,15 @@ class Mesh {
         }
         if(mat.emissiveTexture.image != null && gl3.textures[mat.emissiveTexture.index] != null){
             texture = gl3.textures[mat.emissiveTexture.index].texture;
+            let minFilter = mat.emissiveTexture.sampler.minFilter || gl.LINEAR;
+            let magFilter = mat.emissiveTexture.sampler.magFilter || gl.LINEAR;
+            let wrapS = mat.emissiveTexture.sampler.wrapS || gl.REPEAT;
+            let wrapT = mat.emissiveTexture.sampler.wrapT || gl.REPEAT;
             gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mat.emissiveTexture.sampler.minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mat.emissiveTexture.sampler.magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mat.emissiveTexture.sampler.wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mat.emissiveTexture.sampler.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
         }
         this.material.emissive = {
             index: mat.emissiveTexture.index,
@@ -247,7 +267,7 @@ class Node {
 
         this.children.forEach((w, index) => {
             // 子ノードの親行列を更新してから再計算させる
-            w.parentMatrix = this.mMatrix;
+            w.parentMatrix = mat4.copy(this.mMatrix);
             w.updateMatrix(v, p, force);
         });
     }
@@ -413,6 +433,15 @@ class GLTFNode {
                     if(material.hasOwnProperty('emissiveFactor') === true){
                         emissiveFactor = material.emissiveFactor;
                     }
+                    // blend
+                    let alphaMode = 'OPAQUE';
+                    let alphaCutOff = 0.5;
+                    if(material.hasOwnProperty('alphaMode') === true){
+                        alphaMode = material.alphaMode;
+                    }
+                    if(material.hasOwnProperty('alphaCutOff') === true){
+                        alphaCutOff = material.alphaCutOff;
+                    }
                     this.mesh[index].material = {
                         baseColorTexture: {
                             image: baseColorImage,
@@ -449,6 +478,10 @@ class GLTFNode {
                             index: emissiveImageIndex,
                             texCoordIndex: emissiveTexCoordIndex,
                             factor: emissiveFactor,
+                        },
+                        alphaMode: {
+                            mode: alphaMode,
+                            cutoff: alphaCutOff,
                         },
                     };
                     // ルート階層に名前付きでキャッシュしておく
