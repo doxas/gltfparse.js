@@ -1,5 +1,4 @@
 precision mediump float;
-uniform vec3      lightPosition;
 uniform sampler2D baseColorTexture;
 uniform sampler2D metallicRoughnessTexture;
 uniform sampler2D normalTexture;
@@ -24,9 +23,12 @@ uniform vec3      emissiveFactor;
 uniform bvec4     flags; // (gamma, none, none, none)
 
 varying vec3      vNormal;
+varying vec3      vEye;
+varying vec3      vLight;
+varying vec3      vTangentEye;
+varying vec3      vTangentLight;
 varying vec2      vTexCoord0;
 varying vec2      vTexCoord1;
-varying vec3      vEye;
 
 // defines
 #define PI 3.14159265359
@@ -177,9 +179,13 @@ void main(){
     }
     // normal -----------------------------------------------------------------
     vec3 normal = normalize(vNormal);
+    vec3 eye    = normalize(vEye);
+    vec3 light  = normalize(vLight);
     if(normalTextureExists == true){
         texCoord = normalTexCoordZero == true ? vTexCoord0 : vTexCoord1;
-        /* normal = normalize(texture2D(normalTexture, texCoord).rgb * 2.0 - 1.0) * normalScale; */
+        normal = normalize(texture2D(normalTexture, texCoord).rgb * 2.0 - 1.0) * normalScale;
+        eye = normalize(vTangentEye);
+        light = normalize(vTangentLight);
     }
     // normal -----------------------------------------------------------------
     float occlusion = occlusionStrength;
@@ -197,15 +203,15 @@ void main(){
     // geometry
     GeometricContext geometry;
     geometry.position = -vEye;
-    geometry.normal   = normalize(normal);
-    geometry.viewDir  = normalize(vEye);
+    geometry.normal   = normal;
+    geometry.viewDir  = eye;
     // material
     Material material;
     material.diffuseColor      = mix(albedo, vec3(0.0), metallic);
     material.specularColor     = mix(vec3(0.04), albedo, metallic);
     material.specularRoughness = roughness;
     // Lighting
-    DirectionalLight directionalLight = DirectionalLight(normalize(lightPosition), vec3(1.0));
+    DirectionalLight directionalLight = DirectionalLight(normalize(vLight), vec3(1.0));
     IncidentLight directLight;
     ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
     getDirectionalDirectLightIrradiance(directionalLight, geometry, directLight);
