@@ -50,10 +50,11 @@ let gRoughness = 0.5;
 let gMetallic  = 0.5;
 
 // const PATH_STRING = './resource/assassin_gai/scene.gltf';
-const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
+// const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
 // const PATH_STRING = './resource/E6.glb';
 // const PATH_STRING = './resource/E6/E6_patch.gltf';
 // const PATH_STRING = './resource/AlphaBlendModeTest.glb';
+const PATH_STRING = './resource/TEST02/TEST02.glb';
 
 export default class WebGLFrame {
     static get VERSION(){return 'v0.0.1';}
@@ -261,7 +262,7 @@ export default class WebGLFrame {
         gltfNode.forEach((v) => {
             if(v.isRoot === true){
                 // v.setPosition([1.7, -1.2, 7.1]);
-                // v.setScale([0.0001, 0.0001, 0.0001]);
+                v.setScale([0.001, 0.001, 0.001]);
                 v.updateMatrix(vMatrix, pMatrix);
             }
         });
