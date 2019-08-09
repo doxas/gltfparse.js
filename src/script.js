@@ -22,11 +22,12 @@ let gltfNode;
 let cameraOrbitality   = true;
 let cameraScaleBias    = 0.2;
 let cameraDistance     = 8.0;
-let cameraMinDistance  = 4.0;
-let cameraMaxDistance  = 32.0;
+let cameraMinDistance  = cameraDistance / 2;
+let cameraMaxDistance  = cameraDistance * 4;
 let cameraPosition     = [0.0, 0.0, cameraDistance];
 let centerPoint        = [0.0, 0.0, 0.0];
 let cameraUpDirection  = [0.0, 1.0, 0.0];
+let cameraFarClip      = cameraDistance * 5.0;
 let dCameraPosition    = [0.0, 0.0, cameraDistance];
 let dCenterPoint       = [0.0, 0.0, 0.0];
 let dCameraUpDirection = [0.0, 1.0, 0.0];
@@ -49,9 +50,10 @@ let gRoughness = 0.5;
 let gMetallic  = 0.5;
 
 // const PATH_STRING = './resource/assassin_gai/scene.gltf';
-// const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
+const PATH_STRING = './resource/ac-cobra-classic/source/AC Cobra 1.glb';
 // const PATH_STRING = './resource/E6.glb';
-const PATH_STRING = './resource/E6/E6_patch.gltf';
+// const PATH_STRING = './resource/E6/E6_patch.gltf';
+// const PATH_STRING = './resource/AlphaBlendModeTest.glb';
 
 export default class WebGLFrame {
     static get VERSION(){return 'v0.0.1';}
@@ -249,9 +251,8 @@ export default class WebGLFrame {
         // variables
         let beginTime = Date.now();
         let nowTime = 0;
-        let lightPosition  = [5.0, 5.0, 5.0];
+        let lightPosition  = [-5.0, -5.0, 5.0];
         let ambientColor   = [0.1, 0.1, 0.1];
-        let cameraFarClip  = 10.0;
         let targetTexture  = 0;
 
         // audio
@@ -259,8 +260,8 @@ export default class WebGLFrame {
 
         gltfNode.forEach((v) => {
             if(v.isRoot === true){
-                v.setPosition([1.7, -1.2, 7.1]);
-                v.setScale([0.0001, 0.0001, 0.0001]);
+                // v.setPosition([1.7, -1.2, 7.1]);
+                // v.setScale([0.0001, 0.0001, 0.0001]);
                 v.updateMatrix(vMatrix, pMatrix);
             }
         });
@@ -302,7 +303,7 @@ export default class WebGLFrame {
             // gltf update
             gltfNode.forEach((v) => {
                 if(v.isRoot === true){
-                    // v.setRotate(nowTime * 0.1, [0, 1, 0]);
+                    v.setRotate(nowTime * 0.5, [0, 1, 0]);
                     // v.setPosition([15000.0, -10000.0, 70000.0]);
                     v.updateMatrix(vMatrix, pMatrix);
                 }
