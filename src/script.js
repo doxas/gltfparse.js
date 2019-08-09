@@ -249,7 +249,7 @@ export default class WebGLFrame {
         // variables
         let beginTime = Date.now();
         let nowTime = 0;
-        let lightPosition  = [2.0, 5.0, 9.0];
+        let lightPosition  = [5.0, 5.0, 5.0];
         let ambientColor   = [0.1, 0.1, 0.1];
         let cameraFarClip  = 10.0;
         let targetTexture  = 0;
