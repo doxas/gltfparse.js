@@ -61,6 +61,7 @@ class Mesh {
             }else{
                 this.IBO = gl3.createIbo(mesh.indices.data);
             }
+            this.indexCount = mesh.indices.data.length;
         }
         // material
         let mat = mesh.material;
